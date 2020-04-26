@@ -1,0 +1,27 @@
+---
+layout: default
+markdown: true
+---
+<div class="row">
+  <div id="markdown-container" class="col-lg-9">
+    <header>
+      <h1 id="post-title">{{ page.title }}</h1>
+      {% if page.tags %}
+      <ul class="tags clearfix">
+        {% for tag in page.tags %}
+        <li><i class="fa fa-tag"></i> {{ tag }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </header>
+
+    {{ content }}
+  </div>
+
+  <div id="markdown-outline" class="col-lg-3">
+  </div>
+
+  {% if site.disqus.comments and jekyll.environment == "production" %}
+    {% include disqus.html %}
+  {% endif %}
+</div>
