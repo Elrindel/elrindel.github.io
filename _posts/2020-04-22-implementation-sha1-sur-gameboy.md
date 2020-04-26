@@ -21,7 +21,7 @@ On trouve d'ailleurs assez facilement un certain nombre d'articles qui traitent 
 
 ### Spécifications techniques de la GameBoy
 
-Il existe plusieurs versions de la documentation mais globalement le contenu est toujours le même.\
+Il existe plusieurs versions de la documentation mais globalement le contenu est toujours le même.  
 Afin de m'assurer de ne pas perdre ce document (comme c'est le cas avec le lien fourni par Furrtek), j'ai préféré en faire une copie ici sur mon blog : [Spécifications GameBoy](specifications-gameboy){:target="_blank"}
 
 Ce document donne toutes les indications nécessaires pour utiliser l'ensemble des fonctionnalités de la GB !
@@ -32,7 +32,7 @@ Pour ce projet j'ai utilisé l'émulateur BGB. J'avoue ne pas avoir testé les a
 
 ### Assembleur WLA DX
 
-Comme le suggère Furrtek dans son article, je vais utiliser l'assembleur [WLA-DX](https://github.com/vhelin/wla-dx){:target="_blank"}.\
+Comme le suggère Furrtek dans son article, je vais utiliser l'assembleur [WLA-DX](https://github.com/vhelin/wla-dx){:target="_blank"}.  
 Suivez les instructions de compilations indiquées dans le [readme](https://github.com/vhelin/wla-dx/blob/master/README.md){:target="_blank"} ou [téléchargez une version déjà compilée](http://www.villehelin.com/wla.html){:target="_blank"}.
 
 Pour simplifier l'utilisation, j'ai ajouté le dossier **binaries** à ma variable d'environnement **PATH**.
@@ -62,7 +62,7 @@ Ainsi il suffit d'exécuter la commande ``wla-gb-build mon_jeu.s`` pour obtenir 
 
 Maintenant que je sais comment créer et tester des programmes GB, je peux m'attaquer à la plus grosse partie, l'algorithme SHA1 !
 
-La solution qui me semble la plus évidente consiste à trouver le code de cet algorithme en C, ou même directement en assembleur x86, puis de voir comment je peux l'adapter avec les instructions disponibles en z80 (enfin, la version GB qui n'est pas aussi complète qu'un véritable z80).
+La solution qui me semble la plus évidente consiste à trouver le code de cet algorithme en C, ou même directement en assembleur x86, puis de voir comment je peux l'adapter avec les instructions disponibles en z80 (enfin, la version GB qui est légèrement différente d'un véritable z80).
 
 J'ai donc trouvé mon bonheur sur ce site : [https://www.nayuki.io/page/fast-sha1-hash-implementation-in-x86-assembly](https://www.nayuki.io/page/fast-sha1-hash-implementation-in-x86-assembly){:target="_blank"}
 
@@ -103,7 +103,7 @@ loopmovl:
   ret
 ```
 
-La valeur pointée par le registre **BC** est insérée dans le registre **A** qui est ensuite insérée à l'adresse pointée par le registre **HL**.\
+La valeur pointée par le registre **BC** est insérée dans le registre **A** qui est ensuite insérée à l'adresse pointée par le registre **HL**.  
 Les adresses pointées par **HL** et **BC** sont incrémentées afin de passer à l'octet suivant. Ces opérations sont répétées 4 fois.
 
 #### Instructions ``andl``, ``orl``, ``xorl``
@@ -127,7 +127,7 @@ loopandl:
 
 #### Instruction ``addl``
 
-Voilà enfin un peu de challenge !! Réaliser une addition de deux entiers 32 bits avec seulement des instructions sur 8 bits.\
+Voilà enfin un peu de challenge !! Réaliser une addition de deux entiers 32 bits avec seulement des instructions sur 8 bits.  
 A première vue il est légitime de penser que c'est compliqué, mais en réalité ça ne l'est pas !
 
 L'instruction ``add`` permet d'additionner deux entiers 8 bits, et si 8 bits ne suffisent pas pour stocker le résultat, alors il y aura une retenue qu'on peut intercepter via le flag **c** (Carry Flag) !
@@ -180,7 +180,7 @@ Je sauvegarde les registres **HL** et **DE** sur la pile (Stack) afin de pouvoir
 
 On monte encore d'un cran en terme de challenge !! Je n'ai pas encore réussi à implémenter un ``roll`` générique et j'ai une doute sur la pertinence de le faire étant donné la complexité d'une telle opération comparé au besoin pour ce projet.
 
-En analysant l'algorithme SHA1 on constate que ``roll`` est utilisé seulement avec 3 décalages différents (1, 5 et 30). J'ai donc décidé de créer ces 3 ``roll`` différents sans chercher à faire une version générique.\
+En analysant l'algorithme SHA1 on constate que ``roll`` est utilisé seulement avec 3 décalages différents (1, 5 et 30). J'ai donc décidé de créer ces 3 ``roll`` différents sans chercher à faire une version générique.  
 Pour cela j'ai posé sur papier chacun des 3 décalages afin de voir les correspondances des bits entre chaque octet, et ainsi pouvoir le retranscrire en assembleur.
 
 **Je suis cependant curieux/preneur de toutes solutions génériques ou de toutes optimisations de mon implémentation actuelle !**
@@ -262,11 +262,11 @@ Reg2      DS 2          ;C0B8-C0B9 : Registre 2
 
 **Total :** 185 octets
 
-Les variables ``StateA`` à ``StateE`` contiennent le hash SHA1 en cours de calcul, le hash final sera donc dans ces variables également.\
+Les variables ``StateA`` à ``StateE`` contiennent le hash SHA1 en cours de calcul, le hash final sera donc dans ces variables également.  
 Le hash correspond donc aux 20 octets de l'adresse ``C001`` à l'adresse ``C014``.
 
-``Reg1`` et ``Reg2`` permettent de combler le faible nombre de registres disponibles sur la GB (seulement 3 registres 16 bits), ils servent donc de stockage d'adresse 16 bits.\
-Ils sont nécessaires pour gérer la rotation automatique des 5 variables ``State`` à chaque round (voir le chapitre suivant).\
+``Reg1`` et ``Reg2`` permettent de combler le faible nombre de registres disponibles sur la GB (seulement 3 registres 16 bits), ils servent donc de stockage d'adresse 16 bits.  
+Ils sont nécessaires pour gérer la rotation automatique des 5 variables ``State`` à chaque round (voir le chapitre suivant).  
 Sans eux il est possible de faire cette rotation en utilisant directement la pile (stack) mais il serait alors obligatoire de désactiver les interruptions de la GameBoy afin d'éviter d'avoir une interruption au mauvais moment qui viendrait écraser certaines données sur la pile : [Voir la documentation sur les interruptions](specifications-gameboy#interrupts){:target="_blank"}
 
 ### Initialisation SHA1
@@ -356,7 +356,7 @@ Il peut évidemment arriver qu'on ait besoin d'obtenir le hash de chaines bien p
 
 ### Initialisation d'un round
 
-A chaque round on constate deux changements, à savoir l'incrémentation du compteur de rounds (``Step``) ainsi qu'une rotation des arguments.\
+A chaque round on constate deux changements, à savoir l'incrémentation du compteur de rounds (``Step``) ainsi qu'une rotation des arguments.  
 Pour le round **0**, les arguments sont dans l'ordre ``A, B, C, D, E``, puis au round suivant on constate une rotation : ``E, A, B, C, D``, puis ``D, E, A, B, C`` et ainsi de suite pour les 80 rounds.
 
 Je commence donc par initialiser le tout premier ordre :
@@ -375,7 +375,7 @@ Je commence donc par initialiser le tout premier ordre :
   jp initRound0         ;Jump initRound0
 ```
 
-J'utilise la pile afin de manipuler plus facilement ces valeurs. Le dernier entré est le premier sorti, c'est pour cela que je ``push`` de ``StateE`` à ``StateA`` et non l'inverse.\
+J'utilise la pile afin de manipuler plus facilement ces valeurs. Le dernier entré est le premier sorti, c'est pour cela que je ``push`` de ``StateE`` à ``StateA`` et non l'inverse.  
 Vu qu'il s'agit de l'ordre pour le round **0** je jump directement à cette étape (voir le chapitre sur le round 0 ci-dessous).
 
 Ensuite Il faut donc gérer la rotation des arguments pour les prochains rounds :
@@ -433,9 +433,9 @@ loopRound:
 
 Afin de simplifier les commentaires je pars du principe que ``SP`` vaut 0, ce n'est évidemment pas le cas en réalité !
 
-A ce niveau j'ai plusieurs possibilités pour faire la rotation.\
-Dans un premier temps j'avais réalisé cela à base de ``pop`` et de ``push`` tout en jouant avec ``SP`` pour atteindre le bon emplacement. Mais cette solution n'était pas correcte car incompatible avec les interruptions GB !\
-En effet, lors d'une interruption, la GameBoy va mettre en "pause" le code en cours d'exécution et faire l'équivalent d'un ``call`` vers le code de l'interruption (avec une étape en plus cependant). Cela a pour effet d'ajouter 2 adresses de retour sur la pile (pour les ``ret`` en fin d'interruption).\
+A ce niveau j'ai plusieurs possibilités pour faire la rotation.  
+Dans un premier temps j'avais réalisé cela à base de ``pop`` et de ``push`` tout en jouant avec ``SP`` pour atteindre le bon emplacement. Mais cette solution n'était pas correcte car incompatible avec les interruptions GB !  
+En effet, lors d'une interruption, la GameBoy va mettre en "pause" le code en cours d'exécution et faire l'équivalent d'un ``call`` vers le code de l'interruption (avec une étape en plus cependant). Cela a pour effet d'ajouter 2 adresses de retour sur la pile (pour les ``ret`` en fin d'interruption).  
 De ce fait, si je tente de faire une rotation en me déplaçant directement dans la pile et qu'une interruption intervient en même temps, alors je verrai mes valeurs écrasées par ces adresses de retour.
 
 Pour éviter cela, j'ai ajouté deux variables (``Reg1`` et ``Reg2``) qui me servent de registre tampon en complément des 3 registres 16 bits de la GB. Ainsi je peux totalement vider la pile des 5 arguments puis la reconstruire proprement sans risquer de perdre des valeurs !
@@ -542,7 +542,7 @@ round0:
   jp roundtail
 ```
 
-``round0`` étant atteint via un ``jump``, il n'y a pas d'adresse de retour en plus sur la pile, ça ne change donc pas les accès aux arguments.\
+``round0`` étant atteint via un ``jump``, il n'y a pas d'adresse de retour en plus sur la pile, ça ne change donc pas les accès aux arguments.  
 ``StateT`` est utilisé comme variable temporaire pour réaliser les calculs tout au long du round.
 
 Je fais un ``jump`` et non un ``call`` pour atteindre ``roundtail`` car il est toujours appelé en fin de round, autant se servir du ``ret`` de ``roundtail`` et ainsi ne pas décaler la pile avec un autre ``call`` (les arguments restent donc accessibles avec la même offset sur SP).
@@ -908,7 +908,7 @@ if __name__ == "__main__":
     main()
 ```
 
-Ce script permet donc de générer les blocs (1 par ligne) pour le message passé en argument (``source``), ou via le contenu d'un fichier en précisant l'option ``-f``.\
+Ce script permet donc de générer les blocs (1 par ligne) pour le message passé en argument (``source``), ou via le contenu d'un fichier en précisant l'option ``-f``.  
 L'option ``-o`` permet également de définir le format de sortie, à savoir :
 
 - ``raw`` : Données brutes **Attention cependant aux retours à la ligne, un bloc doit faire 64 octets même si il contient des retours à la ligne**
