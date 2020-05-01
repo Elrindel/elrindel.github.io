@@ -1,30 +1,973 @@
----
-layout: null
----
 <?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>{{ site.title | xml_escape }}</title>
-    <description>{{ site.description | xml_escape }}</description>
-    <link>{{ site.url }}/</link>
-    <atom:link href="{{ "/feed.xml" | prepend: site.url }}" rel="self" type="application/rss+xml"/>
-    <pubDate>{{ site.time | date_to_rfc822 }}</pubDate>
-    <lastBuildDate>{{ site.time | date_to_rfc822 }}</lastBuildDate>
-    <generator>Jekyll v{{ jekyll.version }}</generator>
-    {% for post in site.posts limit:10 %}
+    <title>Elrindel/Flob Blog</title>
+    <description>Mes projets</description>
+    <link>https://elrindel.github.io/</link>
+    <atom:link href="https://elrindel.github.io/feed.xml" rel="self" type="application/rss+xml"/>
+    <pubDate>Fri, 01 May 2020 11:11:10 +0200</pubDate>
+    <lastBuildDate>Fri, 01 May 2020 11:11:10 +0200</lastBuildDate>
+    <generator>Jekyll v4.0.0</generator>
+    
       <item>
-        <title>{{ post.title | xml_escape }}</title>
-        <description>{{ post.content | xml_escape }}</description>
-        <pubDate>{{ post.date | date_to_rfc822 }}</pubDate>
-        <link>{{ post.url | prepend: site.url }}</link>
-        <guid isPermaLink="true">{{ post.url | prepend: site.url }}</guid>
-        {% for tag in post.tags %}
-        <category>{{ tag | xml_escape }}</category>
-        {% endfor %}
-        {% for cat in post.categories %}
-        <category>{{ cat | xml_escape }}</category>
-        {% endfor %}
+        <title>Implémentation SHA1 sur GameBoy</title>
+        <description>&lt;p&gt;Suite à une petite discussion avec &lt;a href=&quot;https://ark444.github.io/&quot; target=&quot;_blank&quot;&gt;entropyQueen&lt;/a&gt; concernant ses projets sur GameBoy, je me suis lancé dans l’implémentation de l’algorithme de hachage SHA1 sur GameBoy !&lt;/p&gt;
+
+&lt;p&gt;C’était une première pour moi puisque j’avais encore jamais fait de programmation sur GB (et très peu fait d’assembleur également). Dans cet article je vais donc vous partager mon apprentissage en essayant d’expliquer au mieux mes recherches/analyses/réflexions pour avancer sur ce projet !&lt;/p&gt;
+
+&lt;p&gt;Les sources de ce projet sont disponibles ici : &lt;a href=&quot;https://github.com/Elrindel/SHA1-GameBoy&quot; target=&quot;_blank&quot;&gt;SHA1 GameBoy&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;programmation-sur-gameboy&quot;&gt;Programmation sur GameBoy&lt;/h2&gt;
+
+&lt;p&gt;Ma première étape a été de me renseigner sur les différentes méthodes possibles de programmation sur GB.&lt;/p&gt;
+
+&lt;p&gt;Il m’est vite apparu que la seule solution réellement intéressante est l’assembleur !&lt;/p&gt;
+
+&lt;p&gt;On trouve d’ailleurs assez facilement un certain nombre d’articles qui traitent très bien ce sujet. Dans mon cas, je me suis arrêté sur l’article de &lt;a href=&quot;http://furrtek.free.fr/?a=gbasm&quot; target=&quot;_blank&quot;&gt;Furrtek&lt;/a&gt; qui a le mérite d’être clair et assez complet pour débuter dans le domaine.&lt;/p&gt;
+
+&lt;h3 id=&quot;spécifications-techniques-de-la-gameboy&quot;&gt;Spécifications techniques de la GameBoy&lt;/h3&gt;
+
+&lt;p&gt;Il existe plusieurs versions de la documentation mais globalement le contenu est toujours le même.&lt;br /&gt;
+Afin de m’assurer de ne pas perdre ce document (comme c’est le cas avec le lien fourni par Furrtek), j’ai préféré en faire une copie ici sur mon blog : &lt;a href=&quot;specifications-gameboy&quot; target=&quot;_blank&quot;&gt;Spécifications GameBoy&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;Ce document donne toutes les indications nécessaires pour utiliser l’ensemble des fonctionnalités de la GB !&lt;/p&gt;
+
+&lt;p&gt;Je ne rentrerai pas dans les détails (sauf si besoin pour certains points spécifiques), des articles comme celui de Furrtek font déjà très bien le travail.&lt;/p&gt;
+
+&lt;p&gt;Pour ce projet j’ai utilisé l’émulateur BGB. J’avoue ne pas avoir testé les autres étant donné que celui-ci répondait parfaitement à mes besoins.&lt;/p&gt;
+
+&lt;h3 id=&quot;assembleur-wla-dx&quot;&gt;Assembleur WLA DX&lt;/h3&gt;
+
+&lt;p&gt;Comme le suggère Furrtek dans son article, je vais utiliser l’assembleur &lt;a href=&quot;https://github.com/vhelin/wla-dx&quot; target=&quot;_blank&quot;&gt;WLA-DX&lt;/a&gt;.&lt;br /&gt;
+Suivez les instructions de compilations indiquées dans le &lt;a href=&quot;https://github.com/vhelin/wla-dx/blob/master/README.md&quot; target=&quot;_blank&quot;&gt;readme&lt;/a&gt; ou &lt;a href=&quot;http://www.villehelin.com/wla.html&quot; target=&quot;_blank&quot;&gt;téléchargez une version déjà compilée&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Pour simplifier l’utilisation, j’ai ajouté le dossier &lt;strong&gt;binaries&lt;/strong&gt; à ma variable d’environnement &lt;strong&gt;PATH&lt;/strong&gt;.&lt;/p&gt;
+
+&lt;p&gt;Voici un petit script que j’ai nommé &lt;code class=&quot;highlighter-rouge&quot;&gt;wla-gb-build&lt;/code&gt; et qui permet de faciliter l’utilisation de &lt;strong&gt;WLA-DX&lt;/strong&gt; (je l’ai ajouté dans le dossier &lt;strong&gt;binaries&lt;/strong&gt;) :&lt;/p&gt;
+
+&lt;div class=&quot;language-sh highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c&quot;&gt;#!/bin/sh&lt;/span&gt;
+
+&lt;span class=&quot;nv&quot;&gt;fileDir&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;$(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;dirname&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$1&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;nv&quot;&gt;fileName&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;$(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;basename&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;--&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$1&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;nv&quot;&gt;fileName&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;${&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;fileName&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;%.*&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;
+
+&lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;objects]&amp;gt;&lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;${&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;fileDir&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;/linkfile&quot;&lt;/span&gt;
+&lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;${&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;fileDir&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;}&lt;/span&gt;/&lt;span class=&quot;k&quot;&gt;${&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;fileName&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;}&lt;/span&gt;.o&amp;gt;&amp;gt;&lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;${&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;fileDir&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;/linkfile&quot;&lt;/span&gt;
+
+&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-e&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;${&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;fileDir&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;${&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;fileName&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;.o&quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;rm&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;${&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;fileDir&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;${&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;fileName&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;.o&quot;&lt;/span&gt;
+
+wla-gb &lt;span class=&quot;nt&quot;&gt;-o&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;${&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;fileDir&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;${&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;fileName&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;.o&quot;&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$1&lt;/span&gt;
+wlalink &lt;span class=&quot;nt&quot;&gt;-d&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-r&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-v&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-s&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;${&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;fileDir&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;/linkfile&quot;&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;${&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;fileDir&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;${&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;fileName&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;.gb&quot;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Ainsi il suffit d’exécuter la commande &lt;code class=&quot;highlighter-rouge&quot;&gt;wla-gb-build mon_jeu.s&lt;/code&gt; pour obtenir le fichier &lt;code class=&quot;highlighter-rouge&quot;&gt;mon_jeu.gb&lt;/code&gt;.&lt;/p&gt;
+
+&lt;h2 id=&quot;algorithme-sha1&quot;&gt;Algorithme SHA1&lt;/h2&gt;
+
+&lt;p&gt;Maintenant que je sais comment créer et tester des programmes GB, je peux m’attaquer à la plus grosse partie, l’algorithme SHA1 !&lt;/p&gt;
+
+&lt;p&gt;La solution qui me semble la plus évidente consiste à trouver le code de cet algorithme en C, ou même directement en assembleur x86, puis de voir comment je peux l’adapter avec les instructions disponibles en z80 (enfin, la version GB qui est légèrement différente d’un véritable z80).&lt;/p&gt;
+
+&lt;p&gt;J’ai donc trouvé mon bonheur sur ce site : &lt;a href=&quot;https://www.nayuki.io/page/fast-sha1-hash-implementation-in-x86-assembly&quot; target=&quot;_blank&quot;&gt;https://www.nayuki.io/page/fast-sha1-hash-implementation-in-x86-assembly&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;Plus particulièrement leur implémentation en version &lt;strong&gt;fast&lt;/strong&gt;.&lt;/p&gt;
+
+&lt;h3 id=&quot;opérations-32-bits-sur-cpu-8-bits&quot;&gt;Opérations 32 bits sur CPU 8 bits&lt;/h3&gt;
+
+&lt;p&gt;En étudiant un peu l’assembleur de la version &lt;strong&gt;fast&lt;/strong&gt; je remarque, sans surprise, un certain nombre d’instructions basées sur une architecture 32 bits.&lt;/p&gt;
+
+&lt;p&gt;Les instructions en question sont les suivantes :&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;movl&lt;/code&gt; Ecrit un entier 32 bits à une adresse en mémoire&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;andl&lt;/code&gt; Opération logique &lt;strong&gt;and&lt;/strong&gt; entre 2 entiers 32 bits&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;orl&lt;/code&gt;  Opération logique &lt;strong&gt;or&lt;/strong&gt; entre 2 entiers 32 bits&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;xorl&lt;/code&gt; Opération logique &lt;strong&gt;xor&lt;/strong&gt; entre 2 entiers 32 bits&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;addl&lt;/code&gt; Additionne 2 entiers 32 bits&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;roll&lt;/code&gt; Rotation des bits vers la gauche sur un entier 32 bits (les bits qui sortent re-rentrent par la droite)&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Concernant l’instruction &lt;code class=&quot;highlighter-rouge&quot;&gt;bswapl&lt;/code&gt; (qui permet d’inverser l’ordre des 4 octets d’un entier 32 bits), elle n’est pas nécessaire en z80 (pour cet algorithme en tout cas), voir l’implémentation de &lt;code class=&quot;highlighter-rouge&quot;&gt;addl&lt;/code&gt; ci-dessous pour plus de détails.&lt;/p&gt;
+
+&lt;p&gt;Désormais il faut trouver un moyen de convertir ces instructions 32 bits pour pouvoir les utiliser sur un CPU 8 bits !&lt;/p&gt;
+
+&lt;p&gt;Afin de simplifier l’utilisation, je choisis arbitrairement que le registre &lt;strong&gt;BC&lt;/strong&gt; correspond à la source, et le registre &lt;strong&gt;HL&lt;/strong&gt; à la destination.&lt;/p&gt;
+
+&lt;h4 id=&quot;instruction-movl&quot;&gt;Instruction &lt;code class=&quot;highlighter-rouge&quot;&gt;movl&lt;/code&gt;&lt;/h4&gt;
+
+&lt;p&gt;Cette instruction est probablement la plus simple à réaliser puisqu’il s’agit de déplacer 4 octets d’une adresse vers une autre.&lt;/p&gt;
+
+&lt;div class=&quot;language-nasm highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nl&quot;&gt;movl:&lt;/span&gt;                   &lt;span class=&quot;c1&quot;&gt;;hl=bc&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;e&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;e = 4&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;loopmovl:&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;a = (bc)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldi&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;(hl) = a, hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;inc&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;bc += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;dec&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;e&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;e -= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;nz&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;loopmovl&lt;/span&gt;        &lt;span class=&quot;c1&quot;&gt;;Si e != 0 : Jump loopmovl&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ret&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;La valeur pointée par le registre &lt;strong&gt;BC&lt;/strong&gt; est insérée dans le registre &lt;strong&gt;A&lt;/strong&gt; qui est ensuite insérée à l’adresse pointée par le registre &lt;strong&gt;HL&lt;/strong&gt;.&lt;br /&gt;
+Les adresses pointées par &lt;strong&gt;HL&lt;/strong&gt; et &lt;strong&gt;BC&lt;/strong&gt; sont incrémentées afin de passer à l’octet suivant. Ces opérations sont répétées 4 fois.&lt;/p&gt;
+
+&lt;h4 id=&quot;instructions-andl-orl-xorl&quot;&gt;Instructions &lt;code class=&quot;highlighter-rouge&quot;&gt;andl&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;orl&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;xorl&lt;/code&gt;&lt;/h4&gt;
+
+&lt;p&gt;Le principe est très similaire à &lt;code class=&quot;highlighter-rouge&quot;&gt;movl&lt;/code&gt;, il faut juste réaliser une opération supplémentaire (&lt;code class=&quot;highlighter-rouge&quot;&gt;and&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;or&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;xor&lt;/code&gt;) sur chaque octet.&lt;/p&gt;
+
+&lt;p&gt;Exemple pour l’instruction &lt;code class=&quot;highlighter-rouge&quot;&gt;and&lt;/code&gt; :&lt;/p&gt;
+
+&lt;div class=&quot;language-nasm highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nl&quot;&gt;andl:&lt;/span&gt;                   &lt;span class=&quot;c1&quot;&gt;;hl&amp;amp;=bc&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;e&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;e = 4&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;loopandl:&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;a = (bc)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;and&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;              &lt;span class=&quot;c1&quot;&gt;;a &amp;amp;= (hl)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldi&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;(hl) = a, hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;inc&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;bc += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;dec&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;e&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;e -= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;nz&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;loopandl&lt;/span&gt;        &lt;span class=&quot;c1&quot;&gt;;Si e != 0 : Jump loopandl&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ret&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h4 id=&quot;instruction-addl&quot;&gt;Instruction &lt;code class=&quot;highlighter-rouge&quot;&gt;addl&lt;/code&gt;&lt;/h4&gt;
+
+&lt;p&gt;Voilà enfin un peu de challenge !! Réaliser une addition de deux entiers 32 bits avec seulement des instructions sur 8 bits.&lt;br /&gt;
+A première vue il est légitime de penser que c’est compliqué, mais en réalité ça ne l’est pas !&lt;/p&gt;
+
+&lt;p&gt;L’instruction &lt;code class=&quot;highlighter-rouge&quot;&gt;add&lt;/code&gt; permet d’additionner deux entiers 8 bits, et si 8 bits ne suffisent pas pour stocker le résultat, alors il y aura une retenue qu’on peut intercepter via le flag &lt;strong&gt;c&lt;/strong&gt; (Carry Flag) !&lt;/p&gt;
+
+&lt;p&gt;On peut donc facilement étendre l’addition à plusieurs octets en utilisant le flag &lt;strong&gt;c&lt;/strong&gt; pour vérifier si il est nécessaire d’appliquer la retenue sur l’octet suivant !&lt;/p&gt;
+
+&lt;p&gt;A ce niveau il faut être cohérent sur l’ordre des octets. Le résultat ne pourra pas être le même si on va de l’octet 1 à 4 (little endian) ou de l’octet 4 à 1 (big endian). Pour simplifier et éviter d’implémenter l’instruction &lt;code class=&quot;highlighter-rouge&quot;&gt;bswapl&lt;/code&gt; j’ai décidé de partir sur l’ordre big endian.&lt;/p&gt;
+
+&lt;div class=&quot;language-nasm highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nl&quot;&gt;addl:&lt;/span&gt;                   &lt;span class=&quot;c1&quot;&gt;;hl+=bc&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;inc&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;bc += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;inc&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;bc += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;inc&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;bc += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;inc&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;inc&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;inc&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;d&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;5&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;d = 5&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jp&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;addlstart&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;Jump addlstart&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;addlnext:&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;pop&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;de&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;UnStack de&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;pop&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;UnStack hl&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;dec&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;hl -= 1&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;addlstart:&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;dec&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;d&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;d -= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;z&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;addlend&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;Si d == 0 : Jump addlend&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;a = (bc)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;dec&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;bc -= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;push&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;Stack hl&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;push&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;de&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;Stack de&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;add&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;              &lt;span class=&quot;c1&quot;&gt;;a += (hl)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;(hl) = a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;nc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;addlnext&lt;/span&gt;        &lt;span class=&quot;c1&quot;&gt;;Si a+(hl) &amp;lt; 256 : Jump addlnext (si pas de retenue)&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;addlnc:&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;dec&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;d&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;d -= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;z&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;addlnext&lt;/span&gt;         &lt;span class=&quot;c1&quot;&gt;;Si d == 0 : Jump addlnext (si on est sur le dernier octet)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;dec&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;hl -= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;inc&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;              &lt;span class=&quot;c1&quot;&gt;;(hl) += 1 (on applique la retenue)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;nz&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;addlnext&lt;/span&gt;        &lt;span class=&quot;c1&quot;&gt;;Si (hl) != 0 : Jump addlnext&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jp&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;addlnc&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;Sinon Jump addlnc (on fait suivre la retenue sur l'octet suivant)&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;addlend:&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ret&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Pour commencer il faut ajouter 3 aux registres &lt;strong&gt;HL&lt;/strong&gt; et &lt;strong&gt;BC&lt;/strong&gt; afin de commencer le traitement sur les bons octets, puis je commence les additions octet par octet tout en appliquant bien la retenue aux octets suivants.&lt;/p&gt;
+
+&lt;p&gt;Je sauvegarde les registres &lt;strong&gt;HL&lt;/strong&gt; et &lt;strong&gt;DE&lt;/strong&gt; sur la pile (Stack) afin de pouvoir procéder aux éventuels applications de retenues sans pour autant perdre le compte (puisque je dois décrémenter &lt;strong&gt;D&lt;/strong&gt; et &lt;strong&gt;HL&lt;/strong&gt; pour gérer correctement les retenues) puis je rétablis &lt;strong&gt;HL&lt;/strong&gt; et &lt;strong&gt;DE&lt;/strong&gt; pour le traitement du prochain octet (&lt;strong&gt;addlnext&lt;/strong&gt;).&lt;/p&gt;
+
+&lt;h4 id=&quot;instruction-roll&quot;&gt;Instruction &lt;code class=&quot;highlighter-rouge&quot;&gt;roll&lt;/code&gt;&lt;/h4&gt;
+
+&lt;p&gt;On monte encore d’un cran en terme de challenge !! Je n’ai pas encore réussi à implémenter un &lt;code class=&quot;highlighter-rouge&quot;&gt;roll&lt;/code&gt; générique et j’ai une doute sur la pertinence de le faire étant donné la complexité d’une telle opération comparé au besoin pour ce projet.&lt;/p&gt;
+
+&lt;p&gt;En analysant l’algorithme SHA1 on constate que &lt;code class=&quot;highlighter-rouge&quot;&gt;roll&lt;/code&gt; est utilisé seulement avec 3 décalages différents (1, 5 et 30). J’ai donc décidé de créer ces 3 &lt;code class=&quot;highlighter-rouge&quot;&gt;roll&lt;/code&gt; différents sans chercher à faire une version générique.&lt;br /&gt;
+Pour cela j’ai posé sur papier chacun des 3 décalages afin de voir les correspondances des bits entre chaque octet, et ainsi pouvoir le retranscrire en assembleur.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Je suis cependant curieux/preneur de toutes solutions génériques ou de toutes optimisations de mon implémentation actuelle !&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;Voici le &lt;code class=&quot;highlighter-rouge&quot;&gt;roll5&lt;/code&gt; en exemple :&lt;/p&gt;
+
+&lt;div class=&quot;language-nasm highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nl&quot;&gt;roll5:&lt;/span&gt;                  &lt;span class=&quot;c1&quot;&gt;;hl=roll(bc,5)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;push&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;Stack hl&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;pop&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;de&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;UnStack de = hl&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;push&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;Stack bc&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;pop&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;UnStack hl = bc&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;b = 3&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;looproll5:&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldi&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;a = (hl), hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;sla&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;a &amp;lt;&amp;lt;= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;sla&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;a &amp;lt;&amp;lt;= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;sla&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;a &amp;lt;&amp;lt;= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;sla&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;a &amp;lt;&amp;lt;= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;sla&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;a &amp;lt;&amp;lt;= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;c = (hl)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;srl&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;c&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;c &amp;gt;&amp;gt;= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;srl&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;c&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;c &amp;gt;&amp;gt;= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;srl&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;c&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;c &amp;gt;&amp;gt;= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;or&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;c&lt;/span&gt;                  &lt;span class=&quot;c1&quot;&gt;;a |= c&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;de&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;(de) = a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;inc&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;de&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;de += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;dec&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;b&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;b -= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;nz&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;looproll5&lt;/span&gt;       &lt;span class=&quot;c1&quot;&gt;;Si b != 0 : Jump looproll5&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;ldd&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;a = (hl), hl -= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;dec&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;hl -= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;dec&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;hl -= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;sla&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;a &amp;lt;&amp;lt;= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;sla&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;a &amp;lt;&amp;lt;= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;sla&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;a &amp;lt;&amp;lt;= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;sla&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;a &amp;lt;&amp;lt;= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;sla&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;a &amp;lt;&amp;lt;= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;c = (hl)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;srl&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;c&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;c &amp;gt;&amp;gt;= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;srl&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;c&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;c &amp;gt;&amp;gt;= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;srl&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;c&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;c &amp;gt;&amp;gt;= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;or&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;c&lt;/span&gt;                  &lt;span class=&quot;c1&quot;&gt;;a |= c&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;de&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;(de) = a&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;ret&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Il s’agit donc de réaliser les bons &lt;code class=&quot;highlighter-rouge&quot;&gt;shift&lt;/code&gt; (décalages) sur les bons octets puis de faire un &lt;code class=&quot;highlighter-rouge&quot;&gt;or&lt;/code&gt; pour fusionner les bits.&lt;/p&gt;
+
+&lt;p&gt;Le principe est identique pour les 3 &lt;code class=&quot;highlighter-rouge&quot;&gt;roll&lt;/code&gt; (1, 5 et 30) mais avec les bons décalages et les bonnes correspondances pour chacun.&lt;/p&gt;
+
+&lt;h3 id=&quot;espace-mémoire-nécessaire-variables&quot;&gt;Espace mémoire nécessaire (variables)&lt;/h3&gt;
+
+&lt;p&gt;Voici les différentes variables qui seront nécessaires au bon fonctionnement de l’algo :&lt;/p&gt;
+
+&lt;div class=&quot;language-nasm highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nf&quot;&gt;Step&lt;/span&gt;      &lt;span class=&quot;nv&quot;&gt;DB&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;C000      : Compteur de rounds&lt;/span&gt;
+&lt;span class=&quot;nf&quot;&gt;StateA&lt;/span&gt;    &lt;span class=&quot;nb&quot;&gt;DS&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;C001-C004 : SHA1 A en cours&lt;/span&gt;
+&lt;span class=&quot;nf&quot;&gt;StateB&lt;/span&gt;    &lt;span class=&quot;nb&quot;&gt;DS&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;C005-C008 : SHA1 B en cours&lt;/span&gt;
+&lt;span class=&quot;nf&quot;&gt;StateC&lt;/span&gt;    &lt;span class=&quot;nb&quot;&gt;DS&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;C009-C00C : SHA1 C en cours&lt;/span&gt;
+&lt;span class=&quot;nf&quot;&gt;StateD&lt;/span&gt;    &lt;span class=&quot;nb&quot;&gt;DS&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;C00D-C010 : SHA1 D en cours&lt;/span&gt;
+&lt;span class=&quot;nf&quot;&gt;StateE&lt;/span&gt;    &lt;span class=&quot;nb&quot;&gt;DS&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;C011-C014 : SHA1 E en cours&lt;/span&gt;
+&lt;span class=&quot;nf&quot;&gt;StateT&lt;/span&gt;    &lt;span class=&quot;nb&quot;&gt;DS&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;C015-C018 : Temporaire pour les opérations sur les State&lt;/span&gt;
+&lt;span class=&quot;nf&quot;&gt;RollT&lt;/span&gt;     &lt;span class=&quot;nb&quot;&gt;DS&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;C019-C01C : Temporaire pour certaines opérations &lt;/span&gt;
+&lt;span class=&quot;nf&quot;&gt;RoundK&lt;/span&gt;    &lt;span class=&quot;nb&quot;&gt;DS&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;C01D-C020 : SHA1 K du round en cours&lt;/span&gt;
+&lt;span class=&quot;nf&quot;&gt;Block&lt;/span&gt;     &lt;span class=&quot;nb&quot;&gt;DS&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;64&lt;/span&gt;         &lt;span class=&quot;c1&quot;&gt;;C021-C060 : SHA1 Block (message à hacher)&lt;/span&gt;
+&lt;span class=&quot;nf&quot;&gt;Schedule&lt;/span&gt;  &lt;span class=&quot;nb&quot;&gt;DS&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;64&lt;/span&gt;         &lt;span class=&quot;c1&quot;&gt;;C061-C0A0 : Temporaire pour les opérations sur Block&lt;/span&gt;
+&lt;span class=&quot;nf&quot;&gt;InitA&lt;/span&gt;     &lt;span class=&quot;nb&quot;&gt;DS&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;C0A1-C0A5 : Sauvegarde SHA1 A à l'initialisation&lt;/span&gt;
+&lt;span class=&quot;nf&quot;&gt;InitB&lt;/span&gt;     &lt;span class=&quot;nb&quot;&gt;DS&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;C0A6-C0A9 : Sauvegarde SHA1 B à l'initialisation&lt;/span&gt;
+&lt;span class=&quot;nf&quot;&gt;InitC&lt;/span&gt;     &lt;span class=&quot;nb&quot;&gt;DS&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;C0AA-C0AD : Sauvegarde SHA1 C à l'initialisation&lt;/span&gt;
+&lt;span class=&quot;nf&quot;&gt;InitD&lt;/span&gt;     &lt;span class=&quot;nb&quot;&gt;DS&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;C0AE-C0B1 : Sauvegarde SHA1 D à l'initialisation&lt;/span&gt;
+&lt;span class=&quot;nf&quot;&gt;InitE&lt;/span&gt;     &lt;span class=&quot;nb&quot;&gt;DS&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;C0B2-C0B5 : Sauvegarde SHA1 E à l'initialisation&lt;/span&gt;
+&lt;span class=&quot;nf&quot;&gt;Reg1&lt;/span&gt;      &lt;span class=&quot;nb&quot;&gt;DS&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;C0B6-C0B7 : Registre 1&lt;/span&gt;
+&lt;span class=&quot;nf&quot;&gt;Reg2&lt;/span&gt;      &lt;span class=&quot;nb&quot;&gt;DS&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;C0B8-C0B9 : Registre 2&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;strong&gt;Total :&lt;/strong&gt; 185 octets&lt;/p&gt;
+
+&lt;p&gt;Les variables &lt;code class=&quot;highlighter-rouge&quot;&gt;StateA&lt;/code&gt; à &lt;code class=&quot;highlighter-rouge&quot;&gt;StateE&lt;/code&gt; contiennent le hash SHA1 en cours de calcul, le hash final sera donc dans ces variables également.&lt;br /&gt;
+Le hash correspond donc aux 20 octets de l’adresse &lt;code class=&quot;highlighter-rouge&quot;&gt;C001&lt;/code&gt; à l’adresse &lt;code class=&quot;highlighter-rouge&quot;&gt;C014&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;Reg1&lt;/code&gt; et &lt;code class=&quot;highlighter-rouge&quot;&gt;Reg2&lt;/code&gt; permettent de combler le faible nombre de registres disponibles sur la GB (seulement 3 registres 16 bits), ils servent donc de stockage d’adresse 16 bits.&lt;br /&gt;
+Ils sont nécessaires pour gérer la rotation automatique des 5 variables &lt;code class=&quot;highlighter-rouge&quot;&gt;State&lt;/code&gt; à chaque round (voir le chapitre suivant).&lt;br /&gt;
+Sans eux il est possible de faire cette rotation en utilisant directement la pile (stack) mais il serait alors obligatoire de désactiver les interruptions de la GameBoy afin d’éviter d’avoir une interruption au mauvais moment qui viendrait écraser certaines données sur la pile : &lt;a href=&quot;specifications-gameboy#interrupts&quot; target=&quot;_blank&quot;&gt;Voir la documentation sur les interruptions&lt;/a&gt;&lt;/p&gt;
+
+&lt;h3 id=&quot;initialisation-sha1&quot;&gt;Initialisation SHA1&lt;/h3&gt;
+
+&lt;p&gt;L’initialisation SHA1 consiste simplement à définir les valeurs des 5 états (&lt;code class=&quot;highlighter-rouge&quot;&gt;StateA&lt;/code&gt; à &lt;code class=&quot;highlighter-rouge&quot;&gt;StateE&lt;/code&gt;), il s’agit du vecteur d’initialisation du SHA1 par défaut :&lt;/p&gt;
+
+&lt;div class=&quot;language-nasm highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nl&quot;&gt;sha1:&lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;;Init StateA = 0x67452301&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;67&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateA&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;45&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateA&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;23&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateA&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;01&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateA&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;
+
+  &lt;span class=&quot;c1&quot;&gt;;Init StateB = 0xEFCDAB89&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;EF&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateB&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;CD&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateB&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;AB&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateB&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;89&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateB&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;
+
+  &lt;span class=&quot;c1&quot;&gt;;Init StateC = 0x98BADCFE&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;98&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateC&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;BA&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateC&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;DC&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateC&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;FE&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateC&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;
+
+  &lt;span class=&quot;c1&quot;&gt;;Init StateD = 0x10325476&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;10&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateD&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;32&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateD&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;54&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateD&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;76&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateD&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;
+
+  &lt;span class=&quot;c1&quot;&gt;;Init StateE = 0xC3D2E1F0&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;C3&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateE&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;D2&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateE&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;E1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateE&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;F0&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateE&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;
+
+&lt;span class=&quot;nl&quot;&gt;sha1next:&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;xor&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;a = 0&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;Step&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;           &lt;span class=&quot;c1&quot;&gt;;(Step) = 0&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateA&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;InitA&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;movl&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;InitA = StateA&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateB&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;InitB&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;movl&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;InitB = StateB&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateC&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;InitC&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;movl&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;InitC = StateC&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateD&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;InitD&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;movl&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;InitD = StateD&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateE&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;InitE&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;movl&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;InitE = StateE&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Cet algorithme procède au calcul du hash SHA1 par blocs de &lt;strong&gt;64 octets&lt;/strong&gt; (voir le chapitre sur la construction de la chaine à hacher pour plus d’informations).&lt;/p&gt;
+
+&lt;p&gt;Il peut évidemment arriver qu’on ait besoin d’obtenir le hash de chaines bien plus longues que &lt;strong&gt;64 octets&lt;/strong&gt;, c’est pourquoi il y a un second point de départ qui permet de ne pas réinitialiser les états du SHA1 en cours, il s’agit de &lt;code class=&quot;highlighter-rouge&quot;&gt;sha1next&lt;/code&gt;.&lt;/p&gt;
+
+&lt;h3 id=&quot;initialisation-dun-round&quot;&gt;Initialisation d’un round&lt;/h3&gt;
+
+&lt;p&gt;A chaque round on constate deux changements, à savoir l’incrémentation du compteur de rounds (&lt;code class=&quot;highlighter-rouge&quot;&gt;Step&lt;/code&gt;) ainsi qu’une rotation des arguments.&lt;br /&gt;
+Pour le round &lt;strong&gt;0&lt;/strong&gt;, les arguments sont dans l’ordre &lt;code class=&quot;highlighter-rouge&quot;&gt;A, B, C, D, E&lt;/code&gt;, puis au round suivant on constate une rotation : &lt;code class=&quot;highlighter-rouge&quot;&gt;E, A, B, C, D&lt;/code&gt;, puis &lt;code class=&quot;highlighter-rouge&quot;&gt;D, E, A, B, C&lt;/code&gt; et ainsi de suite pour les 80 rounds.&lt;/p&gt;
+
+&lt;p&gt;Je commence donc par initialiser le tout premier ordre :&lt;/p&gt;
+
+&lt;div class=&quot;language-nasm highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateE&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;push&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;Stack : StateE =&amp;gt; ArgE&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateD&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;push&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;Stack : StateD =&amp;gt; ArgD&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateC&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;push&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;Stack : StateC =&amp;gt; ArgC&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateB&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;push&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;Stack : StateB =&amp;gt; ArgB&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateA&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;push&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;Stack : StateA =&amp;gt; ArgA&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jp&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;initRound0&lt;/span&gt;         &lt;span class=&quot;c1&quot;&gt;;Jump initRound0&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;J’utilise la pile afin de manipuler plus facilement ces valeurs. Le dernier entré est le premier sorti, c’est pour cela que je &lt;code class=&quot;highlighter-rouge&quot;&gt;push&lt;/code&gt; de &lt;code class=&quot;highlighter-rouge&quot;&gt;StateE&lt;/code&gt; à &lt;code class=&quot;highlighter-rouge&quot;&gt;StateA&lt;/code&gt; et non l’inverse.&lt;br /&gt;
+Vu qu’il s’agit de l’ordre pour le round &lt;strong&gt;0&lt;/strong&gt; je jump directement à cette étape (voir le chapitre sur le round 0 ci-dessous).&lt;/p&gt;
+
+&lt;p&gt;Ensuite Il faut donc gérer la rotation des arguments pour les prochains rounds :&lt;/p&gt;
+
+&lt;div class=&quot;language-nasm highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nl&quot;&gt;loopRound:&lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;;SP = 0&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;Reg1&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;hl = Reg1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;pop&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;de&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;de = sp[0] = ArgA, sp = 2&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;d&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;a = d&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldi&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;(hl) = a, hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;e&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;a = e&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldi&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;(hl) = a, hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;pop&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;de&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;de = sp[2] = ArgB, sp = 4&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;d&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;a = d&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldi&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;(hl) = a, hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;e&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;a = e&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldi&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;(hl) = a, hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;pop&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;de&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;de = sp[4] = ArgC, sp = 6&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;pop&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;hl = sp[6] = ArgD, sp = 8&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;pop&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;bc = sp[8] = ArgE, sp = 10&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;push&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;sp = 8, sp[8] = hl = D&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;push&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;de&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;sp = 6, sp[6] = de = C&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;Reg2&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;hl = Reg2&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;d&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;d = (hl)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;inc&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;e&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;e = (hl)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;push&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;de&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;sp = 4, sp[4] = de = Reg2 = ArgB&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;Reg1&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;hl = Reg1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;d&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;d = (hl)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;inc&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;e&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;e = (hl)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;push&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;de&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;sp = 2, sp[2] = de = Reg1 = ArgA&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;push&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;sp = 0, sp[0] = bc = ArgE&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;Step&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;           &lt;span class=&quot;c1&quot;&gt;;a = (Step)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;inc&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;a += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;Step&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;           &lt;span class=&quot;c1&quot;&gt;;(Step) = a&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;cp&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;16&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;loopRound0a&lt;/span&gt;      &lt;span class=&quot;c1&quot;&gt;;Si Step &amp;lt; 16: Jump loopRound0a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;cp&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;20&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;loopRound0b&lt;/span&gt;      &lt;span class=&quot;c1&quot;&gt;;Si Step &amp;lt; 20: Jump loopRound0b&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;z&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;initRound1&lt;/span&gt;       &lt;span class=&quot;c1&quot;&gt;;Si Step == 20: Jump initRound1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;cp&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;40&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;loopRound1&lt;/span&gt;       &lt;span class=&quot;c1&quot;&gt;;Si Step &amp;lt; 40: Jump loopRound1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;z&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;initRound2&lt;/span&gt;       &lt;span class=&quot;c1&quot;&gt;;Si Step == 40: Jump initRound2&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;cp&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;60&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;loopRound2&lt;/span&gt;       &lt;span class=&quot;c1&quot;&gt;;Si Step &amp;lt; 60: Jump loopRound2&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;z&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;initRound3&lt;/span&gt;       &lt;span class=&quot;c1&quot;&gt;;Si Step == 60: Jump initRound3&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;cp&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;80&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;loopRound3&lt;/span&gt;       &lt;span class=&quot;c1&quot;&gt;;Si Step &amp;lt; 80: Jump loopRound3&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jp&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;loopRoundEnd&lt;/span&gt;       &lt;span class=&quot;c1&quot;&gt;;Sinon Jump loopRoundEnd&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Afin de simplifier les commentaires je pars du principe que &lt;code class=&quot;highlighter-rouge&quot;&gt;SP&lt;/code&gt; vaut 0, ce n’est évidemment pas le cas en réalité !&lt;/p&gt;
+
+&lt;p&gt;A ce niveau j’ai plusieurs possibilités pour faire la rotation.&lt;br /&gt;
+Dans un premier temps j’avais réalisé cela à base de &lt;code class=&quot;highlighter-rouge&quot;&gt;pop&lt;/code&gt; et de &lt;code class=&quot;highlighter-rouge&quot;&gt;push&lt;/code&gt; tout en jouant avec &lt;code class=&quot;highlighter-rouge&quot;&gt;SP&lt;/code&gt; pour atteindre le bon emplacement. Mais cette solution n’était pas correcte car incompatible avec les interruptions GB !&lt;br /&gt;
+En effet, lors d’une interruption, la GameBoy va mettre en “pause” le code en cours d’exécution et faire l’équivalent d’un &lt;code class=&quot;highlighter-rouge&quot;&gt;call&lt;/code&gt; vers le code de l’interruption (avec une étape en plus cependant). Cela a pour effet d’ajouter 2 adresses de retour sur la pile (pour les &lt;code class=&quot;highlighter-rouge&quot;&gt;ret&lt;/code&gt; en fin d’interruption).&lt;br /&gt;
+De ce fait, si je tente de faire une rotation en me déplaçant directement dans la pile et qu’une interruption intervient en même temps, alors je verrai mes valeurs écrasées par ces adresses de retour.&lt;/p&gt;
+
+&lt;p&gt;Pour éviter cela, j’ai ajouté deux variables (&lt;code class=&quot;highlighter-rouge&quot;&gt;Reg1&lt;/code&gt; et &lt;code class=&quot;highlighter-rouge&quot;&gt;Reg2&lt;/code&gt;) qui me servent de registre tampon en complément des 3 registres 16 bits de la GB. Ainsi je peux totalement vider la pile des 5 arguments puis la reconstruire proprement sans risquer de perdre des valeurs !&lt;/p&gt;
+
+&lt;p&gt;Ensuite j’incrémente &lt;code class=&quot;highlighter-rouge&quot;&gt;Step&lt;/code&gt; et je fais des simples comparaisons pour savoir quel round lancer.&lt;/p&gt;
+
+&lt;h3 id=&quot;round-0a-et-roundtail&quot;&gt;Round 0a et roundtail&lt;/h3&gt;
+
+&lt;p&gt;Initialisation du round &lt;strong&gt;0&lt;/strong&gt; :&lt;/p&gt;
+
+&lt;div class=&quot;language-nasm highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nl&quot;&gt;initRound0:&lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;;Init RoundK ROUND0 0x5A827999&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;RoundK&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;hl = RoundK&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;5&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;A&lt;/span&gt;              &lt;span class=&quot;c1&quot;&gt;;a = 0x5A&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldi&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;(hl) = a, hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;82&lt;/span&gt;              &lt;span class=&quot;c1&quot;&gt;;a = 0x82&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldi&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;(hl) = a, hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;79&lt;/span&gt;              &lt;span class=&quot;c1&quot;&gt;;a = 0x79&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldi&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;(hl) = a, hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;99&lt;/span&gt;              &lt;span class=&quot;c1&quot;&gt;;a = 0x99&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldi&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;(hl) = a, hl += 1&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;loopRound0a:&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;round0a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jp&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;loopRound&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;loopRound0b:&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;round0b&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jp&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;loopRound&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;On définit &lt;code class=&quot;highlighter-rouge&quot;&gt;RoundK&lt;/code&gt; lors de l’initialisation du round &lt;strong&gt;0&lt;/strong&gt; puis on appel &lt;code class=&quot;highlighter-rouge&quot;&gt;round0a&lt;/code&gt; :&lt;/p&gt;
+
+&lt;div class=&quot;language-nasm highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nl&quot;&gt;round0a:&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;Step&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;           &lt;span class=&quot;c1&quot;&gt;;a = (Step)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;sla&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;a *= 2&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;sla&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;a *= 2&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;b = 0&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;c = a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;Bl&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;ock&lt;/span&gt;           &lt;span class=&quot;c1&quot;&gt;;hl = Block&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;add&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;hl += bc : Block[Step * 4]&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;push&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;Stack hl&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;Schedule&lt;/span&gt;        &lt;span class=&quot;c1&quot;&gt;;hl = Schedule&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;add&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;hl += bc : Schedule[Step * 4]&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;pop&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;UnStack bc = Block[Step * 4]&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;push&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;Stack hl&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;movl&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;Schedule[Step * 4] = Block[Step * 4]&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;pop&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;UnStack bc = Schedule[Step * 4]&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;sp&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;10&lt;/span&gt;           &lt;span class=&quot;c1&quot;&gt;;hl = Stack+10 = ArgE&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;e&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;e = (hl)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;inc&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;d&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;d = (hl)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;push&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;de&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;Stack de&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;pop&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;UnStack hl = de&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;addl&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;ArgE += Schedule[Step * 4]&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;jp&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;round0&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Il n’y a pas d’instruction pour réaliser directement une multiplication sur GB, cependant, un &lt;code class=&quot;highlighter-rouge&quot;&gt;shift left&lt;/code&gt; revient à multiplier par deux, je le fais donc deux fois afin de multiplier par 4.&lt;/p&gt;
+
+&lt;p&gt;Pour atteindre &lt;code class=&quot;highlighter-rouge&quot;&gt;ArgE&lt;/code&gt; j’utilise le registre &lt;code class=&quot;highlighter-rouge&quot;&gt;SP&lt;/code&gt; sachant que j’ai construit la pile juste avant, je peux donc récupérer l’argument souhaité. Voici d’ailleurs à quoi ressemble la pile à ce moment :&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;SP+0&lt;/code&gt; = Adresse de retour&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;SP+2&lt;/code&gt; = ArgA&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;SP+4&lt;/code&gt; = ArgB&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;SP+6&lt;/code&gt; = ArgC&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;SP+8&lt;/code&gt; = ArgD&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;SP+10&lt;/code&gt; = ArgE&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;round0&lt;/code&gt; correspond à la partie commune entre &lt;code class=&quot;highlighter-rouge&quot;&gt;round0a&lt;/code&gt; et &lt;code class=&quot;highlighter-rouge&quot;&gt;round0b&lt;/code&gt; :&lt;/p&gt;
+
+&lt;div class=&quot;language-nasm highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nl&quot;&gt;round0:&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;sp&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;6&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;hl = Stack+6 = ArgC&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;c = (hl)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;inc&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;b = (hl)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateT&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;hl = StateT&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;movl&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;StateT = ArgC&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;sp&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;8&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;hl = Stack+8 = ArgD&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;c = (hl)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;inc&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;b = (hl)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateT&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;hl = StateT&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;xorl&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;StateT ^= ArgD&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;sp&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;hl = Stack+4 = ArgB&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;c = (hl)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;inc&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;b = (hl)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateT&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;hl = StateT&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;andl&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;StateT &amp;amp;= ArgB&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;sp&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;8&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;hl = Stack+6 = ArgD&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;c = (hl)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;inc&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;b = (hl)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateT&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;hl = StateT&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;xorl&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;StateT ^= ArgD&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;jp&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;roundtail&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;round0&lt;/code&gt; étant atteint via un &lt;code class=&quot;highlighter-rouge&quot;&gt;jump&lt;/code&gt;, il n’y a pas d’adresse de retour en plus sur la pile, ça ne change donc pas les accès aux arguments.&lt;br /&gt;
+&lt;code class=&quot;highlighter-rouge&quot;&gt;StateT&lt;/code&gt; est utilisé comme variable temporaire pour réaliser les calculs tout au long du round.&lt;/p&gt;
+
+&lt;p&gt;Je fais un &lt;code class=&quot;highlighter-rouge&quot;&gt;jump&lt;/code&gt; et non un &lt;code class=&quot;highlighter-rouge&quot;&gt;call&lt;/code&gt; pour atteindre &lt;code class=&quot;highlighter-rouge&quot;&gt;roundtail&lt;/code&gt; car il est toujours appelé en fin de round, autant se servir du &lt;code class=&quot;highlighter-rouge&quot;&gt;ret&lt;/code&gt; de &lt;code class=&quot;highlighter-rouge&quot;&gt;roundtail&lt;/code&gt; et ainsi ne pas décaler la pile avec un autre &lt;code class=&quot;highlighter-rouge&quot;&gt;call&lt;/code&gt; (les arguments restent donc accessibles avec la même offset sur SP).&lt;/p&gt;
+
+&lt;div class=&quot;language-nasm highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nl&quot;&gt;roundtail:&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;sp&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;hl = Stack+4 = ArgB&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;c = (hl)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;inc&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;b = (hl)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;push&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;Stack bc&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;RollT&lt;/span&gt;           &lt;span class=&quot;c1&quot;&gt;;hl = RollT&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;movl&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;RollT = ArgB&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;pop&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;UnStack hl = ArgB&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;RollT&lt;/span&gt;           &lt;span class=&quot;c1&quot;&gt;;bc = RollT&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;roll30&lt;/span&gt;           &lt;span class=&quot;c1&quot;&gt;;ArgB = roll30(RollT)&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;sp&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;10&lt;/span&gt;           &lt;span class=&quot;c1&quot;&gt;;hl = Stack+10 = ArgE&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;c = (hl)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;inc&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;b = ArgE&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;push&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;Stack bc&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;push&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;Stack bc&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;pop&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;UnStack hl = bc&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateT&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;bc = StateT&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;addl&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;ArgE += StateT&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;pop&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;UnStack hl = ArgE&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;RoundK&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;bc = RoundK&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;addl&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;ArgE += RoundK&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;sp&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;hl = Stack+2 = ArgA&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;c = (hl)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;inc&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;b = (hl)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;RollT&lt;/span&gt;           &lt;span class=&quot;c1&quot;&gt;;hl = RollT&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;roll5&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;RollT = roll5(ArgA)&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;sp&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;10&lt;/span&gt;           &lt;span class=&quot;c1&quot;&gt;;hl = Stack+10 = ArgE&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;c = (hl)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;inc&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;b = (hl)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;push&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;Stack bc&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;pop&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;UnStack hl = bc&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;RollT&lt;/span&gt;           &lt;span class=&quot;c1&quot;&gt;;bc = RollT&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;addl&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;ArgE += RollT&lt;/span&gt;
+  
+  &lt;span class=&quot;nf&quot;&gt;ret&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;RollT&lt;/code&gt; est utilisé comme variable temporaire pour réaliser les opérations &lt;code class=&quot;highlighter-rouge&quot;&gt;roll&lt;/code&gt;.&lt;/p&gt;
+
+&lt;h3 id=&quot;round-0b-et-roundschedule&quot;&gt;Round 0b et roundschedule&lt;/h3&gt;
+
+&lt;p&gt;Les rounds &lt;strong&gt;0a&lt;/strong&gt; et &lt;strong&gt;0b&lt;/strong&gt; sont assez similaires et partagent la même valeur de &lt;strong&gt;K&lt;/strong&gt;, ils ont donc la même initialisation ainsi qu’une partie de code en commun (voir ci-dessus pour l’initialisation du round).&lt;/p&gt;
+
+&lt;p&gt;Code &lt;code class=&quot;highlighter-rouge&quot;&gt;round0b&lt;/code&gt; :&lt;/p&gt;
+
+&lt;div class=&quot;language-nasm highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nl&quot;&gt;round0b:&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;roundschedule&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jp&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;round0&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;On a déjà vu &lt;code class=&quot;highlighter-rouge&quot;&gt;round0&lt;/code&gt; ci-dessus puisqu’il s’agit du même code que pour &lt;code class=&quot;highlighter-rouge&quot;&gt;round0a&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;Concernant &lt;code class=&quot;highlighter-rouge&quot;&gt;roundschedule&lt;/code&gt;, il sera utile pour tous les rounds excepté &lt;code class=&quot;highlighter-rouge&quot;&gt;round0a&lt;/code&gt; :&lt;/p&gt;
+
+&lt;div class=&quot;language-nasm highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nl&quot;&gt;roundschedule:&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;Step&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;           &lt;span class=&quot;c1&quot;&gt;;a = (Step)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;sub&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;a -= 3&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;and&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;15&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;a &amp;amp;= 15&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;sla&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;a *= 2&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;sla&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;a *= 2&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;b = 0&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;c = a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;Schedule&lt;/span&gt;        &lt;span class=&quot;c1&quot;&gt;;hl = Schedule&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;add&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;hl += bc : Schedule[(Step - 3) * 4]&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;push&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;Stack hl&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;pop&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;UnStack bc = hl&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateT&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;hl = StateT&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;movl&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;StateT = Schedule[(Step - 3) * 4]&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;Step&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;           &lt;span class=&quot;c1&quot;&gt;;a = (Step)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;sub&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;8&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;a -= 8&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;and&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;15&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;a &amp;amp;= 15&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;sla&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;a *= 2&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;sla&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;a *= 2&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;b = 0&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;c = a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;Schedule&lt;/span&gt;        &lt;span class=&quot;c1&quot;&gt;;hl = Schedule&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;add&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;hl += bc : Schedule[(Step - 8) * 4]&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;push&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;Stack hl&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;pop&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;UnStack bc = hl&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateT&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;hl = StateT&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;xorl&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;StateT ^= Schedule[(Step - 8) * 4]&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;Step&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;           &lt;span class=&quot;c1&quot;&gt;;a = (Step)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;sub&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;14&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;a -= 14&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;and&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;15&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;a &amp;amp;= 15&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;sla&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;a *= 2&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;sla&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;a *= 2&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;b = 0&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;c = a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;Schedule&lt;/span&gt;        &lt;span class=&quot;c1&quot;&gt;;hl = Schedule&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;add&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;hl += bc : Schedule[(Step - 14) * 4]&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;push&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;Stack hl&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;pop&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;UnStack bc = hl&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateT&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;hl = StateT&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;xorl&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;StateT ^= Schedule[(Step - 14) * 4]&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;Step&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;           &lt;span class=&quot;c1&quot;&gt;;a = (Step)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;sub&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;16&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;a -= 16&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;and&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;15&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;a &amp;amp;= 15&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;sla&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;a *= 2&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;sla&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;a *= 2&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;b = 0&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;c = a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;Schedule&lt;/span&gt;        &lt;span class=&quot;c1&quot;&gt;;hl = Schedule&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;add&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;hl += bc : Schedule[(Step - 16) * 4]&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;push&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;Stack hl&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;pop&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;UnStack bc = hl&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateT&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;hl = StateT&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;xorl&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;StateT ^= Schedule[(Step - 16) * 4]&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateT&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;bc = StateT&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;RollT&lt;/span&gt;           &lt;span class=&quot;c1&quot;&gt;;hl = RollT&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;movl&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;RollT = StateT&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;RollT&lt;/span&gt;           &lt;span class=&quot;c1&quot;&gt;;bc = RollT&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateT&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;hl = StateT&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;roll1&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;StateT = roll1(RollT)&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;sp&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;12&lt;/span&gt;           &lt;span class=&quot;c1&quot;&gt;;hl = Stack+12 = ArgE&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;c = (hl)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;inc&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;b = (hl)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;push&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;Stack bc&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;pop&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;UnStack hl = bc&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateT&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;bc = StateT&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;addl&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;ArgE += StateT&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;Step&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;           &lt;span class=&quot;c1&quot;&gt;;a = (Step)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;and&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;15&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;a &amp;amp;= 15&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;sla&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;a *= 2&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;sla&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;a *= 2&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;b = 0&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;c = a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;Schedule&lt;/span&gt;        &lt;span class=&quot;c1&quot;&gt;;hl = Schedule&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;add&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;hl += bc : Schedule[Step * 4]&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateT&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;bc = StateT&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;movl&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;Schedule[Step * 4] = StateT&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;ret&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Rien de particulier à dire, le principe est similaire au reste du code qu’on a déjà vu plus haut.&lt;/p&gt;
+
+&lt;h3 id=&quot;round-1-et-3&quot;&gt;Round 1 et 3&lt;/h3&gt;
+
+&lt;p&gt;J’ai regroupé les rounds &lt;strong&gt;1&lt;/strong&gt; et &lt;strong&gt;3&lt;/strong&gt; dans le même chapitre car la seule différence entre les deux c’est la valeur de &lt;strong&gt;K&lt;/strong&gt; (donc l’initialisation).&lt;/p&gt;
+
+&lt;p&gt;Initialisation du round &lt;strong&gt;1&lt;/strong&gt; :&lt;/p&gt;
+
+&lt;div class=&quot;language-nasm highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nl&quot;&gt;initRound1:&lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;;Init RoundK ROUND1 0x6ED9EBA1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;RoundK&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;hl = RoundK&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;6&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;E&lt;/span&gt;              &lt;span class=&quot;c1&quot;&gt;;a = 0x6E&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldi&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;(hl) = a, hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;D9&lt;/span&gt;              &lt;span class=&quot;c1&quot;&gt;;a = 0xD9&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldi&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;(hl) = a, hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;EB&lt;/span&gt;              &lt;span class=&quot;c1&quot;&gt;;a = 0xEB&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldi&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;(hl) = a, hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;A1&lt;/span&gt;              &lt;span class=&quot;c1&quot;&gt;;a = 0xA1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldi&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;(hl) = a, hl += 1&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;loopRound1:&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;round1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jp&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;loopRound&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Initialisation du round &lt;strong&gt;3&lt;/strong&gt; :&lt;/p&gt;
+
+&lt;div class=&quot;language-nasm highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nl&quot;&gt;initRound3:&lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;;Init RoundK ROUND3 0xCA62C1D6&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;RoundK&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;hl = RoundK&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;CA&lt;/span&gt;              &lt;span class=&quot;c1&quot;&gt;;a = 0xCA&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldi&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;(hl) = a, hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;62&lt;/span&gt;              &lt;span class=&quot;c1&quot;&gt;;a = 0x62&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldi&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;(hl) = a, hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;C1&lt;/span&gt;              &lt;span class=&quot;c1&quot;&gt;;a = 0xC1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldi&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;(hl) = a, hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;D6&lt;/span&gt;              &lt;span class=&quot;c1&quot;&gt;;a = 0xD6&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldi&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;(hl) = a, hl += 1&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;loopRound3:&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;round3&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jp&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;loopRound&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Code &lt;code class=&quot;highlighter-rouge&quot;&gt;round1&lt;/code&gt; et &lt;code class=&quot;highlighter-rouge&quot;&gt;round3&lt;/code&gt; :&lt;/p&gt;
+
+&lt;div class=&quot;language-nasm highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nl&quot;&gt;round1:&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;round3:&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;roundschedule&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;sp&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;hl = Stack+4 = ArgB&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;c = (hl)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;inc&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;b = (hl)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateT&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;hl = StateT&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;movl&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;StateT = ArgB&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;sp&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;6&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;hl = Stack+6 = ArgC&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;c = (hl)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;inc&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;b = (hl)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateT&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;hl = StateT&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;xorl&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;StateT ^= ArgC&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;sp&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;8&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;hl = Stack+8 = ArgD&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;c = (hl)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;inc&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;b = (hl)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateT&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;hl = StateT&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;xorl&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;StateT ^= ArgD&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;jp&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;roundtail&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;round-2&quot;&gt;Round 2&lt;/h3&gt;
+
+&lt;p&gt;Et pour terminer, le round &lt;strong&gt;2&lt;/strong&gt; :&lt;/p&gt;
+
+&lt;div class=&quot;language-nasm highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nl&quot;&gt;round2:&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;roundschedule&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;sp&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;6&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;hl = Stack+6 = ArgC&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;c = (hl)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;inc&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;b = (hl)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateT&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;hl = StateT&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;movl&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;StateT = ArgC&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateT&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;bc = StateT&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;RollT&lt;/span&gt;           &lt;span class=&quot;c1&quot;&gt;;hl = RollT&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;movl&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;RollT = StateT&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;sp&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;8&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;hl = Stack+8 = ArgD&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;c = (hl)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;inc&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;b = (hl)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;push&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;Stack bc : ArgD&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateT&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;hl = StateT&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;orl&lt;/span&gt;              &lt;span class=&quot;c1&quot;&gt;;StateT |= ArgD&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;pop&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;UnStack bc = ArgD&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;RollT&lt;/span&gt;           &lt;span class=&quot;c1&quot;&gt;;hl = RollT&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;andl&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;RollT &amp;amp;= ArgD&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;sp&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;hl = Stack+4 = ArgB&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;c = (hl)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;inc&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;b = (hl)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateT&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;hl = StateT&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;andl&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;StateT &amp;amp;= ArgB&lt;/span&gt;
+  
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;RollT&lt;/span&gt;           &lt;span class=&quot;c1&quot;&gt;;bc = RollT&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateT&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;hl = StateT&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;orl&lt;/span&gt;              &lt;span class=&quot;c1&quot;&gt;;StateT |= RollT&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;jp&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;roundtail&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Ici j’utilise &lt;code class=&quot;highlighter-rouge&quot;&gt;RollT&lt;/code&gt; comme variable temporaire en plus de &lt;code class=&quot;highlighter-rouge&quot;&gt;StateT&lt;/code&gt;. Au final le nom de ces deux variables n’a pas réellement d’importance ;)&lt;/p&gt;
+
+&lt;h3 id=&quot;construction-de-la-chaine-à-hacher-blocs-sha1&quot;&gt;Construction de la chaine à hacher (blocs SHA1)&lt;/h3&gt;
+
+&lt;p&gt;Comme vaguement évoqué dans le chapitre sur l’initialisation SHA1, cet algorithme utilise des blocs de &lt;strong&gt;64 octets&lt;/strong&gt;.&lt;/p&gt;
+
+&lt;p&gt;Pour le moment je n’ai pas implémenté la génération des blocs, c’est donc une évolution future tout à fait envisageable !&lt;/p&gt;
+
+&lt;p&gt;En attendant, afin de tester correctement le calcul du SHA1, j’ai fait un petit script python afin de générer les blocs :&lt;/p&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;#!/usr/bin/env python3
+&lt;/span&gt;
+&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;getopt&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sys&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;io&lt;/span&gt;
+&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;binascii&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;usage&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;():&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;&quot;&quot;
+Usage : build-blocks.py [OPTIONS] &amp;lt;source&amp;gt;
+
+Options :
+-f  Source as file
+-o  Output format (raw,hex,base64), default : hex
+&quot;&quot;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;sys&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;exit&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;output&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;block&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;format&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;format&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;raw&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;block&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;decode&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;'unicode_escape'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;elif&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;format&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;hex&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;binascii&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;b2a_hex&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;block&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;).&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;decode&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;())&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;elif&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;format&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;base64&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;binascii&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;b2a_base64&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;block&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;).&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;decode&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;())&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;():&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;try&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;opts&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;args&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;getopt&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;getopt&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sys&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;argv&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:],&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;o:fh&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,[&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;file&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;output&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;help&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;])&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;except&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;getopt&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;GetoptError&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;as&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;error&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;error&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;usage&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;source&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;' '&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;join&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;args&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;).&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;encode&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;isFile&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;bp&quot;&gt;False&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;out&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;hex&quot;&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;opt&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;arg&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;opts&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;opt&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;-h&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;--help&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+            &lt;span class=&quot;n&quot;&gt;usage&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;elif&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;opt&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;-f&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;--file&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+            &lt;span class=&quot;n&quot;&gt;isFile&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;bp&quot;&gt;True&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;elif&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;opt&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;-o&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;--output&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+            &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;arg&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;raw&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;hex&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;base64&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+                &lt;span class=&quot;n&quot;&gt;out&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;arg&lt;/span&gt;
+            &lt;span class=&quot;k&quot;&gt;else&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+                &lt;span class=&quot;n&quot;&gt;usage&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;else&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+            &lt;span class=&quot;n&quot;&gt;usage&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+
+    &lt;span class=&quot;n&quot;&gt;reader&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;open&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;source&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;rb&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;isFile&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;else&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;io&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;BytesIO&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;source&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;sourcelen&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;block&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;b''&lt;/span&gt;
+
+    &lt;span class=&quot;k&quot;&gt;while&lt;/span&gt; &lt;span class=&quot;bp&quot;&gt;True&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;block&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;reader&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;read&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;64&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;len&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;block&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;64&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+            &lt;span class=&quot;n&quot;&gt;sourcelen&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+=&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;len&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;block&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+            &lt;span class=&quot;k&quot;&gt;break&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;sourcelen&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;64&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;output&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;block&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;out&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+    &lt;span class=&quot;n&quot;&gt;block&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+=&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;b'&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;x80&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;'&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;len&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;block&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;57&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;block&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+=&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;bytes&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;64&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;len&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;block&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;output&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;block&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;out&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;block&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;b''&lt;/span&gt;
+    
+    &lt;span class=&quot;n&quot;&gt;block&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+=&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;bytes&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;57&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;len&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;block&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;blocklen&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;bytes&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;([((&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sourcelen&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0x1F&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0xFF&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;])&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;sourcelen&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&amp;gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;5&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;i&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;range&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;7&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;blocklen&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+=&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;bytes&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;([&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sourcelen&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0xFF&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;])&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;sourcelen&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&amp;gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;8&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;block&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;blocklen&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[::&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;output&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;block&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;out&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+    &lt;span class=&quot;n&quot;&gt;reader&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;close&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;__name__&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;__main__&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Ce script permet donc de générer les blocs (1 par ligne) pour le message passé en argument (&lt;code class=&quot;highlighter-rouge&quot;&gt;source&lt;/code&gt;), ou via le contenu d’un fichier en précisant l’option &lt;code class=&quot;highlighter-rouge&quot;&gt;-f&lt;/code&gt;.&lt;br /&gt;
+L’option &lt;code class=&quot;highlighter-rouge&quot;&gt;-o&lt;/code&gt; permet également de définir le format de sortie, à savoir :&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;raw&lt;/code&gt; : Données brutes &lt;strong&gt;Attention cependant aux retours à la ligne, un bloc doit faire 64 octets même si il contient des retours à la ligne&lt;/strong&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;hex&lt;/code&gt; : Données en hexadécimal&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;base64&lt;/code&gt; : Données en base64&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;On peut désormais insérer ces blocs dans le code assembleur, voici un exemple pour le message &lt;strong&gt;test&lt;/strong&gt; :&lt;/p&gt;
+
+&lt;div class=&quot;language-nasm highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;  &lt;span class=&quot;c1&quot;&gt;;Message : test&lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;;Init Block 1&lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;;Data (64 bytes) = test + \x80 + \x00*58 + \x20&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;Bl&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;ock&lt;/span&gt;           &lt;span class=&quot;c1&quot;&gt;;hl = Block&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;74&lt;/span&gt;              &lt;span class=&quot;c1&quot;&gt;;a = 0x74&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldi&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;(hl) = a, hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;65&lt;/span&gt;              &lt;span class=&quot;c1&quot;&gt;;a = 0x65&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldi&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;(hl) = a, hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;73&lt;/span&gt;              &lt;span class=&quot;c1&quot;&gt;;a = 0x73&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldi&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;(hl) = a, hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;74&lt;/span&gt;              &lt;span class=&quot;c1&quot;&gt;;a = 0x74&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldi&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;(hl) = a, hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;80&lt;/span&gt;              &lt;span class=&quot;c1&quot;&gt;;a = 0x80&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldi&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;(hl) = a, hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;58&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;b = 58&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;xor&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;a = 0&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;initblock1:&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldi&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;(hl) = a, hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;dec&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;b&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;b -= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;nz&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;initblock1&lt;/span&gt;      &lt;span class=&quot;c1&quot;&gt;;Si b &amp;gt; 0 : Jump initblock1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;20&lt;/span&gt;              &lt;span class=&quot;c1&quot;&gt;;a = 0x20&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldi&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;(hl) = a, hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;sha1&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Après avoir inséré le bloc dans la variable bloc on appel &lt;code class=&quot;highlighter-rouge&quot;&gt;sha1&lt;/code&gt; pour exécuter les calculs.&lt;/p&gt;
+
+&lt;p&gt;Dans le cas où on a plusieurs blocs, il faut quand même appeler &lt;code class=&quot;highlighter-rouge&quot;&gt;sha1&lt;/code&gt; sur le premier bloc puis appeler &lt;code class=&quot;highlighter-rouge&quot;&gt;sha1next&lt;/code&gt; à la place pour les prochains blocs !&lt;/p&gt;
+
+&lt;h3 id=&quot;récupération-du-hash&quot;&gt;Récupération du hash&lt;/h3&gt;
+
+&lt;p&gt;Comme indiqué dans le chapitre sur l’espace mémoire nécessaire, le hash est stocké dans les variables &lt;code class=&quot;highlighter-rouge&quot;&gt;StateA&lt;/code&gt; à &lt;code class=&quot;highlighter-rouge&quot;&gt;StateE&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;Le 20 octets de ces 5 variables cumulées correspondent au hash et sont accessibles de l’adresse mémoire &lt;code class=&quot;highlighter-rouge&quot;&gt;C001&lt;/code&gt; à &lt;code class=&quot;highlighter-rouge&quot;&gt;C014&lt;/code&gt;.&lt;/p&gt;
+
+&lt;h2 id=&quot;conclusion&quot;&gt;Conclusion&lt;/h2&gt;
+
+&lt;p&gt;Ce projet a été un challenge très intéressant pour moi. J’ai pris beaucoup de plaisir à découvrir une partie des possibilités qu’offre la GameBoy.&lt;/p&gt;
+
+&lt;p&gt;Il y a encore pas mal d’optimisations/évolutions possibles pour ce projet et je n’exclus pas une éventuelle seconde partie à cet article !&lt;/p&gt;
+
+&lt;p&gt;Un grand merci à &lt;a href=&quot;https://ark444.github.io/&quot; target=&quot;_blank&quot;&gt;entropyQueen&lt;/a&gt; pour m’avoir motivé (sans le vouloir ^^) à me lancer dans ce projet.&lt;/p&gt;
+
+&lt;h2 id=&quot;sources-et-inspirations&quot;&gt;Sources et inspirations&lt;/h2&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;https://github.com/Elrindel/SHA1-GameBoy&quot; target=&quot;_blank&quot;&gt;Code du projet&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;specifications-gameboy&quot; target=&quot;_blank&quot;&gt;Spécifications GameBoy&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://ark444.github.io/&quot; target=&quot;_blank&quot;&gt;Blog d’entropyQueen&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;http://furrtek.free.fr/?a=gbasm&quot; target=&quot;_blank&quot;&gt;Article de Furrtek&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://www.nayuki.io/page/fast-sha1-hash-implementation-in-x86-assembly&quot; target=&quot;_blank&quot;&gt;Source SHA1 en C et assembleur x86&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+        <pubDate>Wed, 22 Apr 2020 22:43:30 +0200</pubDate>
+        <link>https://elrindel.github.io/implementation-sha1-sur-gameboy</link>
+        <guid isPermaLink="true">https://elrindel.github.io/implementation-sha1-sur-gameboy</guid>
+        
+        
+        <category>gameboy</category>
+        
       </item>
-    {% endfor %}
+    
   </channel>
 </rss>
