@@ -5,13 +5,15 @@
     <description>Mes projets</description>
     <link>https://elrindel.github.io/</link>
     <atom:link href="https://elrindel.github.io/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Mon, 04 May 2020 21:39:30 +0200</pubDate>
-    <lastBuildDate>Mon, 04 May 2020 21:39:30 +0200</lastBuildDate>
+    <pubDate>Mon, 04 May 2020 21:54:44 +0200</pubDate>
+    <lastBuildDate>Mon, 04 May 2020 21:54:44 +0200</lastBuildDate>
     <generator>Jekyll v4.0.0</generator>
     
       <item>
         <title>Suite SHA1 sur GameBoy : Interface graphique</title>
-        <description>&lt;p&gt;Cet article est la suite de mon premier article sur &lt;a href=&quot;implementation-sha1-sur-gameboy&quot; target=&quot;_blank&quot;&gt;l’implémentation SHA1 sur Gameboy&lt;/a&gt;.&lt;/p&gt;
+        <description>&lt;p&gt;&lt;img src=&quot;/assets/images/sha1-gui-gb.png&quot; alt=&quot;SHA1 GUI GameBoy&quot; title=&quot;SHA1 GUI GameBoy&quot; class=&quot;center&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Cet article est la suite de mon premier article sur &lt;a href=&quot;implementation-sha1-sur-gameboy&quot; target=&quot;_blank&quot;&gt;l’implémentation SHA1 sur Gameboy&lt;/a&gt;.&lt;/p&gt;
 
 &lt;p&gt;Ici nous allons voir comment créer une interface graphique afin d’utiliser l’algorithme SHA1.&lt;/p&gt;
 

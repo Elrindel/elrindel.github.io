@@ -14,6 +14,8 @@
 
 #markdown-container img { border: 0; max-width: 100%; }
 
+#markdown-container img.center { display: block; margin: auto; }
+
 #markdown-container abbr { border-bottom: none; }
 
 #markdown-container a { color: #00ceff; text-decoration: none; }
