@@ -5,8 +5,8 @@
     <description>Mes projets</description>
     <link>https://elrindel.github.io/</link>
     <atom:link href="https://elrindel.github.io/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Mon, 04 May 2020 21:54:44 +0200</pubDate>
-    <lastBuildDate>Mon, 04 May 2020 21:54:44 +0200</lastBuildDate>
+    <pubDate>Tue, 05 May 2020 00:31:51 +0200</pubDate>
+    <lastBuildDate>Tue, 05 May 2020 00:31:51 +0200</lastBuildDate>
     <generator>Jekyll v4.0.0</generator>
     
       <item>
@@ -163,7 +163,7 @@ Ca tombe bien puisque c’est déjà l’ordre des caractères dans les polices 
 &lt;p&gt;Chaque &lt;strong&gt;tile&lt;/strong&gt; possède un numéro, on peut donc faire coïncider ce numéro à la valeur ASCII du caractère.&lt;/p&gt;
 
 &lt;p&gt;Mon caractère de référence (mon point de départ) est l’espace (&lt;code class=&quot;highlighter-rouge&quot;&gt;\x20&lt;/code&gt;), les caractères précédents étants moins facilement identifiables. On doit donc placer la &lt;strong&gt;tile&lt;/strong&gt; du caractère espace en position &lt;code class=&quot;highlighter-rouge&quot;&gt;0x20&lt;/code&gt;.&lt;br /&gt;
-Les &lt;strong&gt;tiles&lt;/strong&gt; commencent à l’adresse &lt;code class=&quot;highlighter-rouge&quot;&gt;0x8000&lt;/code&gt; et chaque &lt;strong&gt;tile&lt;/strong&gt; occupe 16 octets. L’adresse de la &lt;strong&gt;tile&lt;/strong&gt; &lt;code class=&quot;highlighter-rouge&quot;&gt;0x20&lt;/code&gt; est donc &lt;code class=&quot;highlighter-rouge&quot;&gt;0x8000 + 16 * 0x20&lt;/code&gt; ce qui fait &lt;code class=&quot;highlighter-rouge&quot;&gt;0x8200&lt;/code&gt; (notez bien l’utilisation de &lt;code class=&quot;highlighter-rouge&quot;&gt;0x&lt;/code&gt; pour les valeurs en hexadécimal).&lt;/p&gt;
+Les &lt;strong&gt;tiles&lt;/strong&gt; commencent à l’adresse &lt;code class=&quot;highlighter-rouge&quot;&gt;0x8000&lt;/code&gt; et chaque &lt;strong&gt;tile&lt;/strong&gt; occupe 16 octets. L’adresse de la &lt;strong&gt;tile&lt;/strong&gt; &lt;code class=&quot;highlighter-rouge&quot;&gt;0x20&lt;/code&gt; est donc &lt;code class=&quot;highlighter-rouge&quot;&gt;0x8000 + 16 * 0x20&lt;/code&gt; ce qui fait &lt;code class=&quot;highlighter-rouge&quot;&gt;0x8200&lt;/code&gt;.&lt;/p&gt;
 
 &lt;p&gt;On sait à quelle adresse placer le caractères espace, mais nous avons d’autres &lt;strong&gt;tiles&lt;/strong&gt; avant l’espace dans le fichier que nous avons généré.&lt;br /&gt;
 Il suffit donc de soustraire ces &lt;strong&gt;tiles&lt;/strong&gt; à l’adresse pour savoir à partir de quelle espace mémoire il faudra insérer nos &lt;strong&gt;tiles&lt;/strong&gt;.&lt;/p&gt;
