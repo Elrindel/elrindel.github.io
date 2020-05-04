@@ -10,7 +10,9 @@ function updateOutline() {
 		header = arrAllHeader[i];
 		headerText = header.innerText;
 
-		header.setAttribute('id', id);
+		if(!header.getAttribute('id')){
+			header.setAttribute('id', id);
+		}
 
 		level = header.tagName.match(/^h(\d)$/i)[1];
 		levelCount = level - lastLevel;
@@ -26,7 +28,7 @@ function updateOutline() {
 			}
 		};
 		arrOutline.push('<li>');
-		arrOutline.push('<a href="#' + id + '">' + headerText + '</a>');
+		arrOutline.push('<a href="#' + header.getAttribute('id') + '">' + headerText + '</a>');
 		arrOutline.push('</li>');
 		lastLevel = level;
 		id++;

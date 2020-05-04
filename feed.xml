@@ -5,9 +5,704 @@
     <description>Mes projets</description>
     <link>https://elrindel.github.io/</link>
     <atom:link href="https://elrindel.github.io/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Sat, 02 May 2020 11:24:24 +0200</pubDate>
-    <lastBuildDate>Sat, 02 May 2020 11:24:24 +0200</lastBuildDate>
+    <pubDate>Mon, 04 May 2020 21:39:30 +0200</pubDate>
+    <lastBuildDate>Mon, 04 May 2020 21:39:30 +0200</lastBuildDate>
     <generator>Jekyll v4.0.0</generator>
+    
+      <item>
+        <title>Suite SHA1 sur GameBoy : Interface graphique</title>
+        <description>&lt;p&gt;Cet article est la suite de mon premier article sur &lt;a href=&quot;implementation-sha1-sur-gameboy&quot; target=&quot;_blank&quot;&gt;l’implémentation SHA1 sur Gameboy&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Ici nous allons voir comment créer une interface graphique afin d’utiliser l’algorithme SHA1.&lt;/p&gt;
+
+&lt;p&gt;L’objectif est donc de permettre la saisie d’un texte et de réaliser l’affichage du hash SHA1 pour le texte renseigné.&lt;/p&gt;
+
+&lt;h2 id=&quot;ecrire-un-texte-sur-gameboy&quot;&gt;Ecrire un texte sur GameBoy&lt;/h2&gt;
+
+&lt;p&gt;On pourrait penser qu’il s’agit d’une fonctionnalité intégrée par défaut dans la GB mais ce n’est pas le cas !&lt;/p&gt;
+
+&lt;p&gt;Son écran de &lt;strong&gt;160x144 pixels&lt;/strong&gt; est divisé en &lt;strong&gt;360&lt;/strong&gt; sections de &lt;strong&gt;8x8 pixels&lt;/strong&gt; qui font chacune référence à une &lt;strong&gt;tile&lt;/strong&gt;, donc nous avons un affichage de &lt;strong&gt;20x18 tiles&lt;/strong&gt;.&lt;/p&gt;
+
+&lt;p&gt;Une &lt;strong&gt;tile&lt;/strong&gt; est une image de &lt;strong&gt;8x8 pixels&lt;/strong&gt;. Chaque pixel nécessitant &lt;strong&gt;2 bits&lt;/strong&gt; afin de correspondre à l’une des 4 couleurs possibles, on se retrouve donc avec &lt;strong&gt;16 octets (128 bits)&lt;/strong&gt; par tile.&lt;/p&gt;
+
+&lt;p&gt;Ces &lt;strong&gt;tiles&lt;/strong&gt; sont chargées en mémoire dans la partie VRAM, à partir de l’adresse &lt;code class=&quot;highlighter-rouge&quot;&gt;0x8000&lt;/code&gt; ou &lt;code class=&quot;highlighter-rouge&quot;&gt;0x8800&lt;/code&gt; suivant le &lt;strong&gt;bit 4&lt;/strong&gt; que vous aurez définit à l’adresse &lt;code class=&quot;highlighter-rouge&quot;&gt;0xFF40&lt;/code&gt; : &lt;a href=&quot;specifications-gameboy#lcdcontrolregister&quot; target=&quot;_blank&quot;&gt;Voir les spécifications&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;Vous l’aurez peut-être déjà compris, si on veut afficher du texte, il nous faut des &lt;strong&gt;tiles&lt;/strong&gt; qui correspondent aux caractères qu’on souhaite afficher !&lt;/p&gt;
+
+&lt;h2 id=&quot;choisir-la-police-décriture&quot;&gt;Choisir la police d’écriture&lt;/h2&gt;
+
+&lt;p&gt;Etrangement, il s’avère un peu compliqué de trouver des &lt;strong&gt;packs de tiles de caractères pour GB&lt;/strong&gt;.&lt;/p&gt;
+
+&lt;p&gt;Après quelque recherches je suis arrivé sur ce site : &lt;a href=&quot;https://www.min.at/prinz/o/software/pixelfont/&quot; target=&quot;_blank&quot;&gt;Pixel Font Edit&lt;/a&gt;&lt;br /&gt;
+Ne souhaitant pas installer l’application, j’ai simplement récupéré les fichiers &lt;code class=&quot;highlighter-rouge&quot;&gt;.pf&lt;/code&gt; présents dans l’archive d’installation, ils sont disponibles sur mon GitHub à cette adresse : &lt;a href=&quot;https://github.com/Elrindel/GameBoy-Tiles-Fonts&quot; target=&quot;_blank&quot;&gt;GameBoy Tiles Fonts&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;Ces fichiers &lt;code class=&quot;highlighter-rouge&quot;&gt;.pf&lt;/code&gt; contiennent 256 caractères mais sous un format différent des &lt;strong&gt;tiles&lt;/strong&gt; pour la GameBoy.&lt;br /&gt;
+J’ai donc préparé un petit script de conversion :&lt;/p&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;#!/usr/bin/env python3
+&lt;/span&gt;
+&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;getopt&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sys&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;usage&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;():&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;&quot;&quot;
+Usage : font.py [OPTIONS] &amp;lt;FontFile&amp;gt;
+
+Options :
+-o  Output file
+-s  Start offset
+-l  Limit tiles (number of tiles to export)
+&quot;&quot;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;sys&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;exit&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;():&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;try&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;opts&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;args&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;getopt&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;getopt&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sys&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;argv&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:],&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;o:s:l:h&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,[&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;output&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;start&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;limit&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;help&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;])&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;except&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;getopt&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;GetoptError&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;as&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;error&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;error&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;usage&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+
+    &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;len&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;args&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;usage&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+
+    &lt;span class=&quot;n&quot;&gt;start&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;limit&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;out&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;bp&quot;&gt;None&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;opt&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;arg&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;opts&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;opt&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;-h&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;--help&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+            &lt;span class=&quot;n&quot;&gt;usage&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;elif&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;opt&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;-s&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;--start&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+            &lt;span class=&quot;n&quot;&gt;start&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;int&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;arg&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;elif&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;opt&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;-l&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;--limit&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+            &lt;span class=&quot;n&quot;&gt;limit&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;int&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;arg&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;elif&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;opt&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;-o&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;--output&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+            &lt;span class=&quot;n&quot;&gt;out&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;arg&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;else&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+            &lt;span class=&quot;n&quot;&gt;usage&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+
+    &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;not&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;out&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;usage&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+
+    &lt;span class=&quot;n&quot;&gt;reader&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;open&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;args&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;rb&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;writer&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;open&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;out&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;wb&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;start&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;reader&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;seek&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;start&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;8&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;while&lt;/span&gt; &lt;span class=&quot;bp&quot;&gt;True&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;limit&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+            &lt;span class=&quot;k&quot;&gt;break&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;fontChar&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;reader&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;read&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;8&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;not&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fontChar&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;or&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;len&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;fontChar&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;8&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+            &lt;span class=&quot;k&quot;&gt;break&lt;/span&gt;
+        
+        &lt;span class=&quot;n&quot;&gt;tileChar&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;b''&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;y&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;range&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;8&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+            &lt;span class=&quot;n&quot;&gt;tileCharCode&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;
+            &lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;x&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;range&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;8&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+                &lt;span class=&quot;n&quot;&gt;tileCharCode&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&amp;lt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;
+                &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;fontChar&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;y&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&amp;gt;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;7&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+                    &lt;span class=&quot;n&quot;&gt;tileCharCode&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;
+            &lt;span class=&quot;n&quot;&gt;tileChar&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+=&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;bytes&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;([&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tileCharCode&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;mh&quot;&gt;0xFF&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;tileCharCode&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;mh&quot;&gt;0xFF&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;])&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;writer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;write&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tileChar&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;limit&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;
+
+    &lt;span class=&quot;n&quot;&gt;reader&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;close&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;writer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;close&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;__name__&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;__main__&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;J’ai fait en sorte de pouvoir sélectionner le caractères de départ (option &lt;code class=&quot;highlighter-rouge&quot;&gt;-s&lt;/code&gt;) ainsi que le nombre de caractères (option &lt;code class=&quot;highlighter-rouge&quot;&gt;-l&lt;/code&gt;) afin de générer facilement les tiles dont on a besoin sans pour autant convertir les 256 caractères.&lt;/p&gt;
+
+&lt;p&gt;Exemple d’utilisation : &lt;code class=&quot;highlighter-rouge&quot;&gt;pftotiles.py -s 24 -l 104 -o TINYTYPE.bin TINYTYPE.pf&lt;/code&gt;&lt;br /&gt;
+&lt;em&gt;Permet de convertir 104 caractères à partir du 25ème caractères (l’offset commence à zéro).&lt;/em&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;ajouter-les-tiles-au-programme&quot;&gt;Ajouter les tiles au programme&lt;/h2&gt;
+
+&lt;p&gt;Maintenant qu’on a notre fichier de &lt;strong&gt;tiles&lt;/strong&gt;, il faut l’insérer dans le code :&lt;/p&gt;
+
+&lt;div class=&quot;language-rb highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;ORG&lt;/span&gt; &lt;span class=&quot;vg&quot;&gt;$0800&lt;/span&gt;
+&lt;span class=&quot;ss&quot;&gt;tiles:
+  &lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;INCBIN&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;TINYTYPE.bin&quot;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;On inclut ces données à l’adresse &lt;code class=&quot;highlighter-rouge&quot;&gt;0x0800&lt;/code&gt;.&lt;br /&gt;
+Je n’ai pas trouvé d’indications concernant cette adresse en particulier, je suppose donc qu’on peut l’inclure à n’importe quelle adresse libre dans la ROM (donc après le programme) : &lt;a href=&quot;specifications-gameboy#memorymap&quot; target=&quot;_blank&quot;&gt;Répartition de la mémoire&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;Pour ce projet, l’adresse &lt;code class=&quot;highlighter-rouge&quot;&gt;0x0800&lt;/code&gt; est bien libre donc je vais l’utiliser.&lt;/p&gt;
+
+&lt;p&gt;Désormais on peut charger ces &lt;strong&gt;tiles&lt;/strong&gt; dans l’espace mémoire réservé aux &lt;strong&gt;tiles&lt;/strong&gt; pour l’affichage (VRAM) :&lt;/p&gt;
+
+&lt;div class=&quot;language-nasm highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;de&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;104&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;16&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;de = 1664&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;8000&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;180&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;hl = $8180&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;tiles&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;bc = tiles&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;loadTile:&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;                   &lt;span class=&quot;c1&quot;&gt;;a = (bc)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldi&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                  &lt;span class=&quot;c1&quot;&gt;;(hl) = a, hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;inc&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;                      &lt;span class=&quot;c1&quot;&gt;;bc += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;dec&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;de&lt;/span&gt;                      &lt;span class=&quot;c1&quot;&gt;;de -= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;e&lt;/span&gt;                      &lt;span class=&quot;c1&quot;&gt;;a = e&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;or&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;d&lt;/span&gt;                        &lt;span class=&quot;c1&quot;&gt;;a |= b&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;nz&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;loadTile&lt;/span&gt;              &lt;span class=&quot;c1&quot;&gt;;Si a != 0 : Jump loadTile&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Lorsque j’ai généré mon fichier de &lt;strong&gt;tiles&lt;/strong&gt; (voir le chapitre précédent) j’ai limité à 104 caractères, chaque &lt;strong&gt;tile&lt;/strong&gt; faisant 16 octets, c’est pourquoi je charge &lt;code class=&quot;highlighter-rouge&quot;&gt;1664 octets&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;Concernant l’adresse de départ (&lt;code class=&quot;highlighter-rouge&quot;&gt;0x8180&lt;/code&gt;), l’explication est très similaire.&lt;br /&gt;
+Lors de la génération des &lt;strong&gt;tiles&lt;/strong&gt; j’ai décidé de commencer au 25ème caractère (donc un offset de 24), ce qui fait un décalage de 24x16 octets (384 = &lt;code class=&quot;highlighter-rouge&quot;&gt;0x180&lt;/code&gt;).&lt;br /&gt;
+Voir le chapitre suivant pour plus de détails sur ce placement !&lt;/p&gt;
+
+&lt;h2 id=&quot;utiliser-directement-une-chaine-de-caractères-&quot;&gt;Utiliser directement une chaine de caractères !&lt;/h2&gt;
+
+&lt;p&gt;Comme on l’a vu, sur la GB les caractères sont des &lt;strong&gt;tiles&lt;/strong&gt; qu’on doit charger nous même en mémoire. On peut donc les ranger comme on veut !&lt;/p&gt;
+
+&lt;p&gt;La meilleure solution pour faciliter au maximum l’utilisation de ces &lt;strong&gt;tiles&lt;/strong&gt; est donc de les faire correspondre à l’ordre qu’on a l’habitude de manipuler en informatique, c’est à dire l’&lt;a href=&quot;https://fr.wikipedia.org/wiki/American_Standard_Code_for_Information_Interchange&quot; target=&quot;_blank&quot;&gt;ASCII&lt;/a&gt; !&lt;br /&gt;
+Ca tombe bien puisque c’est déjà l’ordre des caractères dans les polices d’écriture 8x8 que nous avons vu ci-dessus.&lt;/p&gt;
+
+&lt;p&gt;Chaque &lt;strong&gt;tile&lt;/strong&gt; possède un numéro, on peut donc faire coïncider ce numéro à la valeur ASCII du caractère.&lt;/p&gt;
+
+&lt;p&gt;Mon caractère de référence (mon point de départ) est l’espace (&lt;code class=&quot;highlighter-rouge&quot;&gt;\x20&lt;/code&gt;), les caractères précédents étants moins facilement identifiables. On doit donc placer la &lt;strong&gt;tile&lt;/strong&gt; du caractère espace en position &lt;code class=&quot;highlighter-rouge&quot;&gt;0x20&lt;/code&gt;.&lt;br /&gt;
+Les &lt;strong&gt;tiles&lt;/strong&gt; commencent à l’adresse &lt;code class=&quot;highlighter-rouge&quot;&gt;0x8000&lt;/code&gt; et chaque &lt;strong&gt;tile&lt;/strong&gt; occupe 16 octets. L’adresse de la &lt;strong&gt;tile&lt;/strong&gt; &lt;code class=&quot;highlighter-rouge&quot;&gt;0x20&lt;/code&gt; est donc &lt;code class=&quot;highlighter-rouge&quot;&gt;0x8000 + 16 * 0x20&lt;/code&gt; ce qui fait &lt;code class=&quot;highlighter-rouge&quot;&gt;0x8200&lt;/code&gt; (notez bien l’utilisation de &lt;code class=&quot;highlighter-rouge&quot;&gt;0x&lt;/code&gt; pour les valeurs en hexadécimal).&lt;/p&gt;
+
+&lt;p&gt;On sait à quelle adresse placer le caractères espace, mais nous avons d’autres &lt;strong&gt;tiles&lt;/strong&gt; avant l’espace dans le fichier que nous avons généré.&lt;br /&gt;
+Il suffit donc de soustraire ces &lt;strong&gt;tiles&lt;/strong&gt; à l’adresse pour savoir à partir de quelle espace mémoire il faudra insérer nos &lt;strong&gt;tiles&lt;/strong&gt;.&lt;/p&gt;
+
+&lt;p&gt;J’ai 8 caractères avant l’espace dans mon fichier, je dois donc retirer 8 * 16 octets à l’adresse de l’espace : &lt;code class=&quot;highlighter-rouge&quot;&gt;0x8200 - 8 * 16&lt;/code&gt; = &lt;code class=&quot;highlighter-rouge&quot;&gt;0x8180&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;Maintenant que nos &lt;strong&gt;tiles&lt;/strong&gt; sont bien placées en mémoire, nous pouvons stocker nos chaines de caractères directement dans la ROM tout comme on l’a fait précédemment pour le fichier des &lt;strong&gt;tiles&lt;/strong&gt; :&lt;/p&gt;
+
+&lt;div class=&quot;language-rb highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;ORG&lt;/span&gt; &lt;span class=&quot;vg&quot;&gt;$0800&lt;/span&gt;
+&lt;span class=&quot;ss&quot;&gt;tiles:
+  &lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;INCBIN&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;TINYTYPE.bin&quot;&lt;/span&gt;
+&lt;span class=&quot;ss&quot;&gt;strText:
+  &lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;DB&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;Text :&quot;&lt;/span&gt;
+&lt;span class=&quot;ss&quot;&gt;strHash:
+  &lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;DB&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;SHA1 :&quot;&lt;/span&gt;
+&lt;span class=&quot;ss&quot;&gt;strPressUpDown:
+  &lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;DB&lt;/span&gt; &lt;span class=&quot;vg&quot;&gt;$18&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;/&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;vg&quot;&gt;$19&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot; : Change char&quot;&lt;/span&gt;
+&lt;span class=&quot;ss&quot;&gt;strPressA:
+  &lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;DB&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;A   : Select char&quot;&lt;/span&gt;
+&lt;span class=&quot;ss&quot;&gt;strPressB:
+  &lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;DB&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;B   : Deselect char&quot;&lt;/span&gt;
+&lt;span class=&quot;ss&quot;&gt;strPressStart:
+  &lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;DB&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;Press START to hash&quot;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;J’utilise &lt;code class=&quot;highlighter-rouge&quot;&gt;.DB&lt;/code&gt; pour définir mes textes, et dans le cas des caractères spéciaux j’ai préféré utiliser le code hexa directement (pour les flèches up et down dans &lt;code class=&quot;highlighter-rouge&quot;&gt;strPressUpDown&lt;/code&gt;).&lt;/p&gt;
+
+&lt;p&gt;Je peux désormais atteindre mes chaines de caractères facilement dans mon code en utilisant les labels !&lt;/p&gt;
+
+&lt;h2 id=&quot;comment-afficher-les-tiles-à-lécran&quot;&gt;Comment afficher les tiles à l’écran&lt;/h2&gt;
+
+&lt;p&gt;L’affichage est directement lié au contenu des espaces mémoire des 3 différentes couches graphiques.&lt;/p&gt;
+
+&lt;p&gt;Seulement il n’est pas possible d’écrire des données n’importe quand dans ces espaces mémoire !&lt;br /&gt;
+En effet, il faut attendre que l’écran soit éteint ou que l’affichage n’utilise plus la mémoire vidéo.&lt;br /&gt;
+L’interruption V-Blank est justement là pour ça !&lt;br /&gt;
+&lt;strong&gt;D’ailleurs, si vous souhaitez éteindre l’écran, il faut absolument le faire durant le V-Blank sinon vous risquez de réduire la durée de vie de votre écran !&lt;/strong&gt;&lt;/p&gt;
+
+&lt;h3 id=&quot;interruption-v-blank&quot;&gt;Interruption V-Blank&lt;/h3&gt;
+
+&lt;p&gt;L’interruption V-Blank permet donc de manipuler la mémoire vidéo des 3 couches mais il faut également prendre en compte une informations importante : &lt;strong&gt;Vous avez seulement 4560 cycles à partir du début du V-Blank&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;Cette limitation de &lt;strong&gt;4560 cycles&lt;/strong&gt; vient du fait que l’affichage ne va pas attendre la fin des instructions pour s’actualiser ! Ce qui a pour effet de bloquer l’accès à la mémoire durant l’affichage et donc durant le V-Blank si vous dépassez cette limite.&lt;br /&gt;
+Donc si vous dépassez cette limite sans en tenir compte et que vous tentez d’écrire dans la mémoire vidéo, vos données ne seront pas écrites et donc pas affichées/actualisées, mais votre code continuera de s’exécuter, vous constaterez donc des trous dans votre affichage !&lt;/p&gt;
+
+&lt;p&gt;Pour éviter cela, il faut compter les cycles ! Chaque instruction assembleur nécessite un certain nombre de cycles pour être exécutée : &lt;a href=&quot;specifications-gameboy#cpuinstructionset&quot; target=&quot;_blank&quot;&gt;Voir les instructions CPU&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;Toutes les informations sont disponibles dans les spécifications : &lt;a href=&quot;specifications-gameboy#accessingvramandoam&quot; target=&quot;_blank&quot;&gt;Accessing VRAM and OAM&lt;/a&gt;&lt;br /&gt;
+On remarque notamment un exemple permettant d’attendre l’accès à cette mémoire. Ce qui permet par exemple d’avoir un V-Blank de plus de &lt;strong&gt;4560 cycles&lt;/strong&gt; en découpant le code en plusieurs parties tout en attendant l’accès mémoire entre chaque partie (ou même permettre d’accéder à cette mémoire en dehors de l’interruption VBlank).&lt;br /&gt;
+Dans le cas présent, nous le verrons plus bas, j’ai compté les cycles pour segmenter mon affichage en plusieurs parties.&lt;/p&gt;
+
+&lt;p&gt;Il existe donc 3 couches pour afficher des &lt;strong&gt;tiles&lt;/strong&gt;, chacune a ses particularités :&lt;/p&gt;
+
+&lt;h3 id=&quot;background&quot;&gt;Background&lt;/h3&gt;
+
+&lt;p&gt;D’une dimension de &lt;strong&gt;32x32 tiles&lt;/strong&gt;, il est principalement utilisé pour afficher le niveau du jeu grâce à sa propriété qui est d’être scrollable, c’est à dire que la zone affichée à l’écran (20x18 tiles) peut se balader sur le background.&lt;br /&gt;
+De plus, le scroll dans le background est infini puisqu’il peut tourner en boucle ! Le bas est lié au haut tout comme le bord droit est lié au bord gauche.&lt;/p&gt;
+
+&lt;p&gt;La background est stocké à partir de l’adresse &lt;code class=&quot;highlighter-rouge&quot;&gt;0x9800&lt;/code&gt; ou &lt;code class=&quot;highlighter-rouge&quot;&gt;0x9C00&lt;/code&gt; suivant le &lt;strong&gt;bit 3&lt;/strong&gt; définit à l’adresse &lt;code class=&quot;highlighter-rouge&quot;&gt;0xFF40&lt;/code&gt; : &lt;a href=&quot;specifications-gameboy#lcdcontrolregister&quot; target=&quot;_blank&quot;&gt;Voir les spécifications&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;Chaque octet du background correspond au numéro de la tile à afficher.&lt;/p&gt;
+
+&lt;h3 id=&quot;window&quot;&gt;Window&lt;/h3&gt;
+
+&lt;p&gt;Cette couche vient par dessus le background. Elle possède également une dimension de &lt;strong&gt;32x32 tiles&lt;/strong&gt; (1 octet par tile) mais n’est pas scrollable comme le background.&lt;br /&gt;
+Sa propriété est de pouvoir être déplacée sur l’écran, ce qui permet par exemple de créer une boite de dialogue, un menu etc…&lt;/p&gt;
+
+&lt;p&gt;Tout comme le background, son adresse est soit &lt;code class=&quot;highlighter-rouge&quot;&gt;0x9800&lt;/code&gt; soit &lt;code class=&quot;highlighter-rouge&quot;&gt;0x9C00&lt;/code&gt; dépendamment du &lt;strong&gt;bit 6&lt;/strong&gt; définit à l’adresse &lt;code class=&quot;highlighter-rouge&quot;&gt;0xFF40&lt;/code&gt;.&lt;/p&gt;
+
+&lt;h3 id=&quot;sprites&quot;&gt;Sprites&lt;/h3&gt;
+
+&lt;p&gt;Les &lt;strong&gt;sprites&lt;/strong&gt; ont la priorité d’affichage la plus haute (ils sont affichés au dessus des autres couches).&lt;br /&gt;
+Il est possible d’afficher un maximum de 40 &lt;strong&gt;sprites&lt;/strong&gt; mais avec une limitation à 10 &lt;strong&gt;sprites&lt;/strong&gt; par ligne.&lt;/p&gt;
+
+&lt;p&gt;Un &lt;strong&gt;sprite&lt;/strong&gt; est composé de 1 &lt;strong&gt;tile&lt;/strong&gt; (8x8 ou 8x16 suivant le flag), de coordonnées X et Y pour le positionner sur l’écran, ainsi que d’un flag correspondant à quelques options : &lt;a href=&quot;specifications-gameboy#vramspriteattributetableoam&quot; target=&quot;_blank&quot;&gt;VRAM Sprite Attribute Table (OAM)&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;Il y a donc 4 octets par &lt;strong&gt;sprite&lt;/strong&gt; (Y, X, tile, flag).
+Ils sont stockés à partir de l’adresse &lt;code class=&quot;highlighter-rouge&quot;&gt;0xFE00&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;On peut utiliser les sprites pour un très petit texte ou pour afficher les personnages dans le jeu par exemple.&lt;/p&gt;
+
+&lt;h3 id=&quot;choix-de-laffichage-pour-ce-projet&quot;&gt;Choix de l’affichage pour ce projet&lt;/h3&gt;
+
+&lt;p&gt;Vu la quantité d’informations à afficher, j’élimine les &lt;strong&gt;sprites&lt;/strong&gt;.&lt;/p&gt;
+
+&lt;p&gt;Il reste donc &lt;strong&gt;background&lt;/strong&gt; ou &lt;strong&gt;window&lt;/strong&gt;. Les deux peuvent répondre au besoin !&lt;/p&gt;
+
+&lt;p&gt;Le &lt;strong&gt;background&lt;/strong&gt; est très simple à manipuler, j’ai donc décidé de l’utiliser.&lt;/p&gt;
+
+&lt;h3 id=&quot;exemple-daffichage-dun-texte&quot;&gt;Exemple d’affichage d’un texte&lt;/h3&gt;
+
+&lt;p&gt;Voici un exemple pour afficher le texte &lt;code class=&quot;highlighter-rouge&quot;&gt;Press START to hash&lt;/code&gt; sur la dernière ligne de l’écran :&lt;/p&gt;
+
+&lt;div class=&quot;language-nasm highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;9&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;A20&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;strPressStart&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;d&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;19&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;loopStrPressStart:&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldi&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;inc&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;dec&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;d&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;nz&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;loopStrPressStart&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;L’adresse du background commence à &lt;code class=&quot;highlighter-rouge&quot;&gt;0x9800&lt;/code&gt;, chaque ligne du background possède &lt;code class=&quot;highlighter-rouge&quot;&gt;32&lt;/code&gt; positions, le scroll est placé en &lt;code class=&quot;highlighter-rouge&quot;&gt;0,0&lt;/code&gt; et l’écran a &lt;code class=&quot;highlighter-rouge&quot;&gt;18&lt;/code&gt; lignes. On peut donc calculer l’emplacement de la dernière ligne affichée à l’écran : &lt;code class=&quot;highlighter-rouge&quot;&gt;0x9800 + 17 * 32&lt;/code&gt; = &lt;code class=&quot;highlighter-rouge&quot;&gt;0x9A20&lt;/code&gt;&lt;br /&gt;
+&lt;em&gt;(&lt;strong&gt;17&lt;/strong&gt; car on veut le début de la 18ème ligne et non le début de la 19ème, tout comme il faudrait mettre &lt;strong&gt;0&lt;/strong&gt; pour avoir le début de la première ligne)&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;Il faut évidemment spécifier la longueur du texte (&lt;strong&gt;19&lt;/strong&gt; dans le cas présent).&lt;br /&gt;
+Sachant que l’écran permet d’afficher &lt;strong&gt;20&lt;/strong&gt; caractères par ligne, si le texte est plus long il faudra donc l’afficher sur plusieurs lignes.&lt;/p&gt;
+
+&lt;h2 id=&quot;détection-des-touches&quot;&gt;Détection des touches&lt;/h2&gt;
+
+&lt;p&gt;La lecture de l’état des boutons n’est pas compliquée mais s’avère être potentiellement instable !&lt;/p&gt;
+
+&lt;p&gt;En effet, seuls &lt;strong&gt;4 bits&lt;/strong&gt; (0 à 3) du registre &lt;code class=&quot;highlighter-rouge&quot;&gt;0xFF00&lt;/code&gt; permettent de récupérer l’état des boutons.&lt;br /&gt;
+Mais la GameBoy possède 8 boutons, donc ces &lt;strong&gt;4 bits&lt;/strong&gt; sont partagés suivant l’état des &lt;strong&gt;bits 4 et 5&lt;/strong&gt; comme spécifié dans la doc : &lt;a href=&quot;specifications-gameboy#joypadinput&quot; target=&quot;_blank&quot;&gt;Joypad Input&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;Notez bien que les &lt;strong&gt;bits 4 et 5&lt;/strong&gt; sont sélectionnés lorsqu’ils sont à &lt;strong&gt;0&lt;/strong&gt; et que les bits des boutons sont également à &lt;strong&gt;0&lt;/strong&gt; lorsque ces derniers sont appuyés.&lt;/p&gt;
+
+&lt;p&gt;Donc, pour lire l’état des boutons, il faut procéder en deux étapes :&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;On définit les bits 4 et 5 dans le registre &lt;code class=&quot;highlighter-rouge&quot;&gt;0xFF00&lt;/code&gt; afin de spécifier quelles touches on souhaite lire&lt;/li&gt;
+  &lt;li&gt;On récupère la valeur de ce même registre (&lt;code class=&quot;highlighter-rouge&quot;&gt;0xFF00&lt;/code&gt;) pour lire l’état des bits 0 à 3 correspondants aux boutons&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;Concernant l’instabilité que j’évoquais précédemment, elle est liée au fait que l’attribution des bits correspondants aux états des boutons n’est pas instantanée !&lt;br /&gt;
+La lecture peut donc être faussée si elle est faite trop rapidement.&lt;/p&gt;
+
+&lt;p&gt;Dans la pratique, il est donc recommandé de lire plusieurs fois le registre &lt;code class=&quot;highlighter-rouge&quot;&gt;0xFF00&lt;/code&gt; pour être certain de récupérer les bonnes valeurs. On peut également définir les bits 4 et 5 en amont dans le code afin d’anticiper la future lecture !&lt;/p&gt;
+
+&lt;p&gt;Voici un exemple pour la touche &lt;code class=&quot;highlighter-rouge&quot;&gt;Down&lt;/code&gt; :&lt;/p&gt;
+
+&lt;div class=&quot;language-nasm highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;%&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;00100000&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;a = 0b00100000&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldh&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;00&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;(FF00) = a&lt;/span&gt;
+  
+  &lt;span class=&quot;nf&quot;&gt;ldh&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;00&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;a = (FF00)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldh&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;00&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;a = (FF00)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldh&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;00&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;a = (FF00)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldh&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;00&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;a = (FF00)&lt;/span&gt;
+  
+  &lt;span class=&quot;nf&quot;&gt;bit&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                   &lt;span class=&quot;c1&quot;&gt;;Test bit 3 du registre a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;nz&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;notKeyDown&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;Si bit 3 != 0 : Jump notKeyDown&lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;;TODO : action key down&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;notKeyDown:&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;On définit les bits 4 et 5 du registre &lt;code class=&quot;highlighter-rouge&quot;&gt;0xFF00&lt;/code&gt; pour sélectionner les touches de direction (bit 4 à 0 et bit 5 à 1).&lt;/p&gt;
+
+&lt;p&gt;Afin de bien lire la bonne valeur, on fait plusieurs lectures du registre &lt;code class=&quot;highlighter-rouge&quot;&gt;0xFF00&lt;/code&gt;.&lt;br /&gt;
+Je n’ai pas trouvé d’informations précises sur le nombre de cycles nécessaires avant d’être vraiment certain de la lecture … à l’occasion je procèderai à quelques tests pour déterminer cela.&lt;/p&gt;
+
+&lt;p&gt;Et enfin, on test le bit de la touche souhaitée, si il n’est pas à 0 on saute après le traitement du bouton.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Dans l’optique d’optimiser le nombre d’instructions dans l’interruption VBlank, je place la gestion des touches dans la boucle principale &lt;code class=&quot;highlighter-rouge&quot;&gt;loop&lt;/code&gt; !&lt;/strong&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;saisie-dun-texte-depuis-la-gameboy&quot;&gt;Saisie d’un texte depuis la GameBoy&lt;/h2&gt;
+
+&lt;p&gt;Maintenant qu’on sait comment afficher du texte à l’écran et comment détecter l’appui d’une touche, on va pouvoir mettre en place le système de saisie de caractères.&lt;/p&gt;
+
+&lt;p&gt;L’écran pouvant afficher 20 tiles sur une ligne, j’ai décidé de limiter la saisie à 20 caractères, ce qui est déjà pas mal pour tester le SHA1 !&lt;/p&gt;
+
+&lt;h3 id=&quot;espace-mémoire-nécessaire&quot;&gt;Espace mémoire nécessaire&lt;/h3&gt;
+
+&lt;p&gt;Voici les variables nécessaires pour réaliser la saisie d’un texte :&lt;/p&gt;
+
+&lt;div class=&quot;language-nasm highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nf&quot;&gt;VBlankTimer&lt;/span&gt;  &lt;span class=&quot;nv&quot;&gt;DB&lt;/span&gt;         &lt;span class=&quot;c1&quot;&gt;;Compteur VBlank pour avoir un timer synchronisé sur l'affichage&lt;/span&gt;
+&lt;span class=&quot;nf&quot;&gt;KeyLastDir&lt;/span&gt;   &lt;span class=&quot;nv&quot;&gt;DB&lt;/span&gt;         &lt;span class=&quot;c1&quot;&gt;;Dernière touche de direction appuyées&lt;/span&gt;
+&lt;span class=&quot;nf&quot;&gt;KeyLastBut&lt;/span&gt;   &lt;span class=&quot;nv&quot;&gt;DB&lt;/span&gt;         &lt;span class=&quot;c1&quot;&gt;;Dernier bouton appuyé&lt;/span&gt;
+&lt;span class=&quot;nf&quot;&gt;CharTmp&lt;/span&gt;      &lt;span class=&quot;nv&quot;&gt;DB&lt;/span&gt;         &lt;span class=&quot;c1&quot;&gt;;Caractère en cours&lt;/span&gt;
+&lt;span class=&quot;nf&quot;&gt;CharCount&lt;/span&gt;    &lt;span class=&quot;nv&quot;&gt;DB&lt;/span&gt;         &lt;span class=&quot;c1&quot;&gt;;Nombre de caractères déjà sélectionnés&lt;/span&gt;
+&lt;span class=&quot;nf&quot;&gt;CharBuffer&lt;/span&gt;   &lt;span class=&quot;nb&quot;&gt;DS&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;20&lt;/span&gt;      &lt;span class=&quot;c1&quot;&gt;;Enregistrement des caractères sélectionnés&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;VBlankTimer&lt;/code&gt; sera nécessaire pour gérer le clignotement du caractère en cours, voir ci-dessous.&lt;/p&gt;
+
+&lt;p&gt;Les deux variables &lt;code class=&quot;highlighter-rouge&quot;&gt;KeyLast&lt;/code&gt; permettent d’éviter l’exécution en boucle des boutons, voir ci-dessous.&lt;/p&gt;
+
+&lt;h3 id=&quot;défilement-des-caractères&quot;&gt;Défilement des caractères&lt;/h3&gt;
+
+&lt;p&gt;Le défilement des caractères sera géré par les touches &lt;code class=&quot;highlighter-rouge&quot;&gt;Up&lt;/code&gt; et &lt;code class=&quot;highlighter-rouge&quot;&gt;Down&lt;/code&gt; :&lt;/p&gt;
+
+&lt;div class=&quot;language-nasm highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;%&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;00100000&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;a = 0b00100000&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldh&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;00&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;(FF00) = a&lt;/span&gt;
+  
+  &lt;span class=&quot;nf&quot;&gt;ldh&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;00&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;a = (FF00)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldh&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;00&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;a = (FF00)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldh&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;00&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;a = (FF00)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldh&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;00&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;a = (FF00)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldh&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;00&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;a = (FF00)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldh&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;00&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;a = (FF00)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldh&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;00&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;a = (FF00)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldh&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;00&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;a = (FF00)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                    &lt;span class=&quot;c1&quot;&gt;;b = a&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;and&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;%&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;00001111&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;a &amp;amp;= 0b00001111&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;xor&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;%&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;00001111&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;a ^= 0b00001111&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;nz&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;notKeyDirRefresh&lt;/span&gt;    &lt;span class=&quot;c1&quot;&gt;;Si a != 0 : Jump notKeyDirRefresh&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;xor&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                     &lt;span class=&quot;c1&quot;&gt;;a = 0&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;KeyLastDir&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;         &lt;span class=&quot;c1&quot;&gt;;(KeyLastDir) = a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;notKeyUp&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;Jump notKeyUp&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;notKeyDirRefresh:&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;bit&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;b&lt;/span&gt;                   &lt;span class=&quot;c1&quot;&gt;;Test bit 3 de b : Down&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;nz&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;notKeyDown&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;Si bit 3 != 0 : Jump notKeyDown&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;KeyLastDir&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;         &lt;span class=&quot;c1&quot;&gt;;a = (KeyLastDir)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;cp&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;z&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;notKeyDown&lt;/span&gt;           &lt;span class=&quot;c1&quot;&gt;;Si a == 4 : Jump notKeyDown&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;                    &lt;span class=&quot;c1&quot;&gt;;a = 4&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;KeyLastDir&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;         &lt;span class=&quot;c1&quot;&gt;;(KeyLastDir) = a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;Ch&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;arTmp&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;a = (CharTmp)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;dec&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                     &lt;span class=&quot;c1&quot;&gt;;a -= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;cp&lt;/span&gt; &lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;20&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;nc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;processKeyDown&lt;/span&gt;      &lt;span class=&quot;c1&quot;&gt;;Si a &amp;gt;= 32 : Jump processKeyDown&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;7&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;E&lt;/span&gt;                  &lt;span class=&quot;c1&quot;&gt;;a = 126&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;processKeyDown:&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;Ch&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;arTmp&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;(CharTmp) = a&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;notKeyDown:&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;bit&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;b&lt;/span&gt;                   &lt;span class=&quot;c1&quot;&gt;;Test bit 2 de b : Up&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;nz&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;notKeyUp&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;Si bit 2 != 0 : Jump notKeyUp&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;KeyLastDir&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;         &lt;span class=&quot;c1&quot;&gt;;a = (KeyLastDir)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;cp&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;z&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;notKeyUp&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;Si a == 3 : Jump notKeyUp&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;                    &lt;span class=&quot;c1&quot;&gt;;a = 3&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;KeyLastDir&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;         &lt;span class=&quot;c1&quot;&gt;;(KeyLastDir) = a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;Ch&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;arTmp&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;a = (CharTmp)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;inc&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                     &lt;span class=&quot;c1&quot;&gt;;a += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;cp&lt;/span&gt; &lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;7&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;F&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;processKeyUp&lt;/span&gt;         &lt;span class=&quot;c1&quot;&gt;;Si a &amp;lt; 127 : Jump processKeyUp&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;20&lt;/span&gt;                  &lt;span class=&quot;c1&quot;&gt;;a = 32&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;processKeyUp:&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;Ch&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;arTmp&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;(CharTmp) = a&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;notKeyUp:&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Je commence par définir puis lire le registre &lt;code class=&quot;highlighter-rouge&quot;&gt;0xFF00&lt;/code&gt; pour les touches directionnelles (voir le chapitre précédent sur la détection des touches).&lt;/p&gt;
+
+&lt;p&gt;Si aucune touche est appuyée je réinitialise &lt;code class=&quot;highlighter-rouge&quot;&gt;KeyLastDir&lt;/code&gt; et je saute à la fin du traitement des touches.&lt;br /&gt;
+Sinon je vérifie les deux touches (Up et Down) tout en m’assurant que &lt;code class=&quot;highlighter-rouge&quot;&gt;KeyLastDir&lt;/code&gt; n’a pas la valeur de la touche en cours (valeur définie arbitrairement par moi même).&lt;br /&gt;
+Cette vérification a pour but d’éviter une exécution en boucle car le CPU est bien plus rapide que nos doigts, il aura le temps de passer plusieurs fois sur la détection de la touche avant qu’on ait relâché le bouton !&lt;/p&gt;
+
+&lt;p&gt;Puis j’incrémente ou décrémente la valeur de &lt;code class=&quot;highlighter-rouge&quot;&gt;CharTmp&lt;/code&gt; tout en m’assurant de rester dans la limite des caractères que je souhaite utiliser (en l’occurrence entre 32 et 126, soit &lt;code class=&quot;highlighter-rouge&quot;&gt;\x20&lt;/code&gt; et &lt;code class=&quot;highlighter-rouge&quot;&gt;\x7E&lt;/code&gt;).&lt;/p&gt;
+
+&lt;h3 id=&quot;validationsuppression-du-caractère&quot;&gt;Validation/Suppression du caractère&lt;/h3&gt;
+
+&lt;p&gt;La touche &lt;code class=&quot;highlighter-rouge&quot;&gt;A&lt;/code&gt; permettra de valider la sélection du caractère en cours, et la touche &lt;code class=&quot;highlighter-rouge&quot;&gt;B&lt;/code&gt; supprimera le dernier caractère et permettra de le re-définir :&lt;/p&gt;
+
+&lt;div class=&quot;language-nasm highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;%&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;00010000&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;a = 0b00010000&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldh&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;00&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;(FF00) = a&lt;/span&gt;
+  
+  &lt;span class=&quot;nf&quot;&gt;ldh&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;00&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;a = (FF00)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldh&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;00&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;a = (FF00)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldh&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;00&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;a = (FF00)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldh&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;00&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;a = (FF00)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldh&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;00&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;a = (FF00)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldh&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;00&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;a = (FF00)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldh&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;00&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;a = (FF00)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldh&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;00&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;a = (FF00)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                    &lt;span class=&quot;c1&quot;&gt;;b = a&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;and&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;%&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;00001111&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;a &amp;amp;= 0b00001111&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;xor&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;%&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;00001111&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;a ^= 0b00001111&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;nz&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;notKeyButRefresh&lt;/span&gt;    &lt;span class=&quot;c1&quot;&gt;;Si a != 0 : Jump notKeyButRefresh&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;xor&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                     &lt;span class=&quot;c1&quot;&gt;;a = 0&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;KeyLastBut&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;         &lt;span class=&quot;c1&quot;&gt;;(KeyLastBut) = a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;notKeyB&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;Jump notKeyB&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;notKeyButRefresh:&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;bit&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;b&lt;/span&gt;                   &lt;span class=&quot;c1&quot;&gt;;Test bit 0 de b : A&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;nz&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;notKeyA&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;Si bit 0 != 0 : Jump notKeyA&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;KeyLastBut&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;         &lt;span class=&quot;c1&quot;&gt;;a = (KeyLastBut)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;cp&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;z&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;notKeyA&lt;/span&gt;              &lt;span class=&quot;c1&quot;&gt;;Si a == 1 : Jump notKeyA&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;                    &lt;span class=&quot;c1&quot;&gt;;a = 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;KeyLastBut&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;         &lt;span class=&quot;c1&quot;&gt;;(KeyLastBut) = a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;Ch&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;arCount&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;a = (CharCount)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;cp&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;20&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;z&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;notKeyA&lt;/span&gt;              &lt;span class=&quot;c1&quot;&gt;;Si a == 20 : Jump notKeyA&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;xor&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;d&lt;/span&gt;                     &lt;span class=&quot;c1&quot;&gt;;d = 0&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;e&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                    &lt;span class=&quot;c1&quot;&gt;;e = a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;Ch&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;arBuffer&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;hl = CharBuffer&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;add&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;de&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;hl += de&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;inc&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                     &lt;span class=&quot;c1&quot;&gt;;a += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;Ch&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;arCount&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;(CharCount) = a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;Ch&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;arTmp&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;a = (CharTmp)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;(hl) = a&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;notKeyA:&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;bit&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;b&lt;/span&gt;                   &lt;span class=&quot;c1&quot;&gt;;Test bit 1 de b : B&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;nz&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;notKeyB&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;Si bit 1 != 0 : Jump notKeyB&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;KeyLastBut&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;         &lt;span class=&quot;c1&quot;&gt;;a = (KeyLastBut)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;cp&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;z&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;notKeyB&lt;/span&gt;              &lt;span class=&quot;c1&quot;&gt;;Si a == 2 : Jump notKeyB&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;                    &lt;span class=&quot;c1&quot;&gt;;a = 2&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;KeyLastBut&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;         &lt;span class=&quot;c1&quot;&gt;;(KeyLastBut) = a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;Ch&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;arCount&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;a = (CharCount)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;cp&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;z&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;notKeyB&lt;/span&gt;              &lt;span class=&quot;c1&quot;&gt;;Si a == 0 : Jump notKeyB&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;xor&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;d&lt;/span&gt;                     &lt;span class=&quot;c1&quot;&gt;;d = 0&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;e&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                    &lt;span class=&quot;c1&quot;&gt;;e = a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;Ch&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;arBuffer&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;hl = CharBuffer&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;add&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;de&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;hl += de&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;dec&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                     &lt;span class=&quot;c1&quot;&gt;;a -= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;Ch&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;arCount&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;(CharCount) = a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;00&lt;/span&gt;                  &lt;span class=&quot;c1&quot;&gt;;a = 0&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;(hl) = a&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;notKeyB:&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Le fonctionnement est très similaire aux touches &lt;code class=&quot;highlighter-rouge&quot;&gt;Up&lt;/code&gt; et &lt;code class=&quot;highlighter-rouge&quot;&gt;Down&lt;/code&gt; du chapitre précédent.&lt;/p&gt;
+
+&lt;p&gt;La touche &lt;code class=&quot;highlighter-rouge&quot;&gt;A&lt;/code&gt; va ajouter &lt;code class=&quot;highlighter-rouge&quot;&gt;CharTmp&lt;/code&gt; dans &lt;code class=&quot;highlighter-rouge&quot;&gt;CharBuffer&lt;/code&gt; en appliquant le décalage d’adresse pour le caractère en cours (en se basant sur &lt;code class=&quot;highlighter-rouge&quot;&gt;CharCount&lt;/code&gt;), puis va incrémenter &lt;code class=&quot;highlighter-rouge&quot;&gt;CharCount&lt;/code&gt; afin de passer au caractère suivant.&lt;/p&gt;
+
+&lt;p&gt;La touche &lt;code class=&quot;highlighter-rouge&quot;&gt;B&lt;/code&gt; va réinitialiser la valeur du caractère en cours dans &lt;code class=&quot;highlighter-rouge&quot;&gt;CharBuffer&lt;/code&gt; puis décrémenter &lt;code class=&quot;highlighter-rouge&quot;&gt;CharCount&lt;/code&gt;.&lt;/p&gt;
+
+&lt;h3 id=&quot;affichage-et-clignotement-pour-le-caractère-en-cours&quot;&gt;Affichage et clignotement pour le caractère en cours&lt;/h3&gt;
+
+&lt;p&gt;Pour mettre en valeur le caractère en cours, une pratique courante est de le faire clignoter.&lt;br /&gt;
+Pour que le clignotement soit bien synchronisé avec la fréquence d’affichage, j’ai décidé d’ajouter un compteur qui est incrémenté à chaque exécution de VBlank.&lt;/p&gt;
+
+&lt;div class=&quot;language-nasm highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;VBlankTimer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;        &lt;span class=&quot;c1&quot;&gt;;a = (VBlankTimer)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;inc&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                     &lt;span class=&quot;c1&quot;&gt;;a += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;VBlankTimer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;        &lt;span class=&quot;c1&quot;&gt;;(VBlankTimer) = a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;e&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                    &lt;span class=&quot;c1&quot;&gt;;e = a&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;9800&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;hl = $9800&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;d&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;20&lt;/span&gt;                   &lt;span class=&quot;c1&quot;&gt;;d = 20&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;Ch&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;arBuffer&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;bc = CharBuffer&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;displayCharBuffer:&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;a = (bc)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldi&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;(hl) = a, hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;inc&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;                    &lt;span class=&quot;c1&quot;&gt;;bc += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;dec&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;d&lt;/span&gt;                     &lt;span class=&quot;c1&quot;&gt;;d -= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;nz&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;disp&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;layCharBuffer&lt;/span&gt;   &lt;span class=&quot;c1&quot;&gt;;Si d != 0 : Jump displayCharBuffer&lt;/span&gt;
+
+  
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;9800&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;hl = $9800&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;Ch&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;arCount&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;a = (CharCount)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;                    &lt;span class=&quot;c1&quot;&gt;;b = 0&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                    &lt;span class=&quot;c1&quot;&gt;;c = a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;add&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;hl += bc&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;xor&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                     &lt;span class=&quot;c1&quot;&gt;;a = 0&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;bit&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;e&lt;/span&gt;                   &lt;span class=&quot;c1&quot;&gt;;Test bit 4 de e&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;z&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;endBlink&lt;/span&gt;             &lt;span class=&quot;c1&quot;&gt;;Si bit 4 == 0 : Jump endBlink&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;Ch&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;arTmp&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;            &lt;span class=&quot;c1&quot;&gt;;a = (CharTmp)&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;endBlink:&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;(hl) = a&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;A chaque passage dans VBlank j’incrémente &lt;code class=&quot;highlighter-rouge&quot;&gt;VBlankTimer&lt;/code&gt; puis j’actualise l’affichage du contenu de &lt;code class=&quot;highlighter-rouge&quot;&gt;CharBuffer&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;Afin d’afficher la &lt;strong&gt;tile&lt;/strong&gt; au bon emplacement, j’utilise la variable &lt;code class=&quot;highlighter-rouge&quot;&gt;CharCount&lt;/code&gt; pour décaler l’adresse mémoire du background au bon endroit.&lt;/p&gt;
+
+&lt;p&gt;Après quelques tests, le bit 4 du compteur me semble être le meilleur compris pour la vitesse de clignotement. Si il est à 0 j’affiche une &lt;strong&gt;tile&lt;/strong&gt; vide, sinon j’affiche le caractère en cours.&lt;/p&gt;
+
+&lt;h2 id=&quot;intégration-du-code-sha1&quot;&gt;Intégration du code SHA1&lt;/h2&gt;
+
+&lt;p&gt;Il est temps d’intégrer l’algorithme SHA1 que j’ai réalisé dans mon précédent article : &lt;a href=&quot;implementation-sha1-sur-gameboy&quot; target=&quot;_blank&quot;&gt;Implémentation SHA1 sur GameBoy&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;Un simple copier coller des variables et du code nécessaire au fonctionnement de l’algo et c’est déjà quasiment fini.&lt;/p&gt;
+
+&lt;h3 id=&quot;construction-du-bloc-sha1&quot;&gt;Construction du bloc SHA1&lt;/h3&gt;
+
+&lt;p&gt;Un point que j’avais pas implémenté et qui est nécessaire ici, c’est la génération automatique du bloc SHA1.&lt;br /&gt;
+En effet, pour fonctionner, le SHA1 fait ses opérations sur des blocs de 64 octets, mais j’ai déjà expliqué cela dans mon précédent article : &lt;a href=&quot;implementation-sha1-sur-gameboy#construction-de-la-chaine-à-hacher-blocs-sha1&quot; target=&quot;_blank&quot;&gt;Construction de la chaine à hacher (blocs SHA1)&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;Dans le cas présent, la saisie étant limitée à 20 caractères, le bloc SHA1 est très simple à générer :&lt;/p&gt;
+
+&lt;div class=&quot;language-nasm highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nl&quot;&gt;processSha1:&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;Bl&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;ock&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;hl = Block&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;Ch&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;arBuffer&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;bc = CharBuffer&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;Ch&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;arCount&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;a = (CharCount)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;cp&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;z&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;loopBufferBlockEnd&lt;/span&gt;   &lt;span class=&quot;c1&quot;&gt;;Si a == 0 : Jump loopBufferBlockEnd&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;e&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                    &lt;span class=&quot;c1&quot;&gt;;e = a&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;loopBufferBlock:&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;a = (bc)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldi&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;(hl) = a, hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;inc&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;                    &lt;span class=&quot;c1&quot;&gt;;bc += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;dec&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;e&lt;/span&gt;                     &lt;span class=&quot;c1&quot;&gt;;e -= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;nz&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;loopBufferBlock&lt;/span&gt;     &lt;span class=&quot;c1&quot;&gt;;Si e != 0 : Jump loopBufferBlock&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;loopBufferBlockEnd:&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;80&lt;/span&gt;                  &lt;span class=&quot;c1&quot;&gt;;a = $80&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldi&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;(hl) = a, hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;Ch&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;arCount&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;a = (CharCount)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;e&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                    &lt;span class=&quot;c1&quot;&gt;;e = a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;62&lt;/span&gt;                   &lt;span class=&quot;c1&quot;&gt;;a = 62&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;sub&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;e&lt;/span&gt;                     &lt;span class=&quot;c1&quot;&gt;;a -= e&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;e&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                    &lt;span class=&quot;c1&quot;&gt;;e = a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;xor&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                     &lt;span class=&quot;c1&quot;&gt;;a = 0&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;loopInitBlock:&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldi&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;(hl) = a, hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;dec&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;e&lt;/span&gt;                     &lt;span class=&quot;c1&quot;&gt;;e -= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;nz&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;loopInitBlock&lt;/span&gt;       &lt;span class=&quot;c1&quot;&gt;;Si e != 0 : Jump loopInitBlock&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;Ch&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;arCount&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;a = (CharCount)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;sla&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                     &lt;span class=&quot;c1&quot;&gt;;a &amp;lt;&amp;lt;= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;sla&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                     &lt;span class=&quot;c1&quot;&gt;;a &amp;lt;&amp;lt;= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;sla&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                     &lt;span class=&quot;c1&quot;&gt;;a &amp;lt;&amp;lt;= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldi&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;(hl) = a, hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;sha1&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;                    &lt;span class=&quot;c1&quot;&gt;;a = 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;Disp&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;layHash&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;        &lt;span class=&quot;c1&quot;&gt;;(DisplayHash) = a&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;ret&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Je copie le contenu de &lt;code class=&quot;highlighter-rouge&quot;&gt;CharBuffer&lt;/code&gt; dans &lt;code class=&quot;highlighter-rouge&quot;&gt;Block&lt;/code&gt; en me basant sur &lt;code class=&quot;highlighter-rouge&quot;&gt;CharCount&lt;/code&gt; pour savoir combien de caractères je dois copier (sachant qu’il peut aussi y avoir 0 caractères).&lt;/p&gt;
+
+&lt;p&gt;Puis je fini la construction du bloc avec le caractère &lt;code class=&quot;highlighter-rouge&quot;&gt;\x80&lt;/code&gt; suivi du remplissage des &lt;strong&gt;null bytes&lt;/strong&gt; et enfin le dernier caractère représentant la longueur de la chaine.&lt;/p&gt;
+
+&lt;p&gt;Après avoir appelé le calcul du &lt;code class=&quot;highlighter-rouge&quot;&gt;sha1&lt;/code&gt; je définit ma variable &lt;code class=&quot;highlighter-rouge&quot;&gt;DisplayHash&lt;/code&gt; à &lt;strong&gt;1&lt;/strong&gt; afin de déclencher l’affichage lors du prochain VBlank.&lt;/p&gt;
+
+&lt;h3 id=&quot;affichage-du-hash&quot;&gt;Affichage du hash&lt;/h3&gt;
+
+&lt;p&gt;On peut désormais passer à l’affichage du hash SHA1.&lt;br /&gt;
+Puisqu’on doit manipuler la mémoire vidéo il faut faire cela dans le VBlank, ce qui implique de prendre en compte la limitation de &lt;strong&gt;4560 cycles&lt;/strong&gt; comme expliqué dans le chapitre &lt;a href=&quot;#interruption-v-blank&quot;&gt;Interruption V-Blank&lt;/a&gt;.&lt;/p&gt;
+
+&lt;div class=&quot;language-nasm highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;Disp&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;layHash&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;        &lt;span class=&quot;c1&quot;&gt;;a = (DisplayHash)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;cp&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;nz&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;tryDisplayHash&lt;/span&gt;      &lt;span class=&quot;c1&quot;&gt;;Si a != 1 : Jump tryDisplayHash&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;inc&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                     &lt;span class=&quot;c1&quot;&gt;;a += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;Disp&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;layHash&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;        &lt;span class=&quot;c1&quot;&gt;;(DisplayHash) = a&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;9860&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;hl = $9860&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;d&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;20&lt;/span&gt;                   &lt;span class=&quot;c1&quot;&gt;;d = 20&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;xor&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                     &lt;span class=&quot;c1&quot;&gt;;a = 0&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;loopCleanText:&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldi&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;(hl) = a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;dec&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;d&lt;/span&gt;                     &lt;span class=&quot;c1&quot;&gt;;d -= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;nz&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;loopCleanText&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;9860&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;hl = $9860&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;Ch&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;arBuffer&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;bc = CharBuffer&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;Ch&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;arCount&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;;a = (CharCount)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;cp&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;z&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;disp&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;layHashEnd&lt;/span&gt;       &lt;span class=&quot;c1&quot;&gt;;Si a == 0 : Jump displayHashEnd&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;d&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                    &lt;span class=&quot;c1&quot;&gt;;d = a&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;loopDisplayText:&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;a = (bc)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldi&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;(hl) = a, hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;inc&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;                    &lt;span class=&quot;c1&quot;&gt;;bc += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;dec&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;d&lt;/span&gt;                     &lt;span class=&quot;c1&quot;&gt;;d -= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;nz&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;loopDisplayText&lt;/span&gt;     &lt;span class=&quot;c1&quot;&gt;;Si d != 0 : Jump loopDisplayText&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;disp&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;layHashEnd&lt;/span&gt;         &lt;span class=&quot;c1&quot;&gt;;Jump displayHashEnd&lt;/span&gt;
+
+&lt;span class=&quot;nl&quot;&gt;tryDisplayHash:&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;cp&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;nz&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;disp&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;layHashEnd&lt;/span&gt;      &lt;span class=&quot;c1&quot;&gt;;Si a != 2 : Jump displayHashEnd&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;98&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;C0&lt;/span&gt;               &lt;span class=&quot;c1&quot;&gt;;hl = $98C0&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;StateA&lt;/span&gt;              &lt;span class=&quot;c1&quot;&gt;;bc = StateA&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;d&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;                    &lt;span class=&quot;c1&quot;&gt;;d = 4&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;e&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;5&lt;/span&gt;                    &lt;span class=&quot;c1&quot;&gt;;e = 5&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;loopDisplayHash&lt;/span&gt;        &lt;span class=&quot;c1&quot;&gt;;Jump loopDisplayHash&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;loopDisplayHash2:&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;push&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;                   &lt;span class=&quot;c1&quot;&gt;;Stack bc&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;d&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;                    &lt;span class=&quot;c1&quot;&gt;;d = 4&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;24&lt;/span&gt;                  &lt;span class=&quot;c1&quot;&gt;;bc = 24&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;add&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;hl += bc&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;pop&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;                    &lt;span class=&quot;c1&quot;&gt;;UnStack bc&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;loopDisplayHash:&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;a = (bc)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;srl&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                     &lt;span class=&quot;c1&quot;&gt;;a &amp;gt;&amp;gt;= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;srl&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                     &lt;span class=&quot;c1&quot;&gt;;a &amp;gt;&amp;gt;= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;srl&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                     &lt;span class=&quot;c1&quot;&gt;;a &amp;gt;&amp;gt;= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;srl&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                     &lt;span class=&quot;c1&quot;&gt;;a &amp;gt;&amp;gt;= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;cp&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;10&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;disp&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;layHashHex1&lt;/span&gt;      &lt;span class=&quot;c1&quot;&gt;;Si a &amp;lt; 10 : Jump displayHashHex1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;add&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;7&lt;/span&gt;                     &lt;span class=&quot;c1&quot;&gt;;a += 7&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;displayHashHex1:&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;add&lt;/span&gt; &lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;30&lt;/span&gt;                   &lt;span class=&quot;c1&quot;&gt;;a += 48&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldi&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;(hl) = a, hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;;a = (bc)&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;and&lt;/span&gt; &lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;F&lt;/span&gt;                   &lt;span class=&quot;c1&quot;&gt;;a &amp;amp;= 15&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;cp&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;10&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;disp&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;layHashHex2&lt;/span&gt;      &lt;span class=&quot;c1&quot;&gt;;Si a &amp;lt; 10 : Jump displayHashHex2&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;add&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;7&lt;/span&gt;                     &lt;span class=&quot;c1&quot;&gt;;a += 7&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;displayHashHex2:&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;add&lt;/span&gt; &lt;span class=&quot;kc&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;30&lt;/span&gt;                   &lt;span class=&quot;c1&quot;&gt;;a += 48&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ldi&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;;(hl) = a, hl += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;inc&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;bc&lt;/span&gt;                    &lt;span class=&quot;c1&quot;&gt;;bc += 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;dec&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;d&lt;/span&gt;                     &lt;span class=&quot;c1&quot;&gt;;d -= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;nz&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;loopDisplayHash&lt;/span&gt;     &lt;span class=&quot;c1&quot;&gt;;Si d != 0 : Jump loopDisplayHash&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;dec&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;e&lt;/span&gt;                     &lt;span class=&quot;c1&quot;&gt;;e -= 1&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;nz&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;loopDisplayHash2&lt;/span&gt;    &lt;span class=&quot;c1&quot;&gt;;Si e != 0 : Jump loopDisplayHash2&lt;/span&gt;
+
+  &lt;span class=&quot;nf&quot;&gt;xor&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;                     &lt;span class=&quot;c1&quot;&gt;;a = 0&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;ld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;Disp&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;layHash&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;a&lt;/span&gt;        &lt;span class=&quot;c1&quot;&gt;;(DisplayHash) = a&lt;/span&gt;
+  &lt;span class=&quot;nf&quot;&gt;jr&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;endVBlank&lt;/span&gt;              &lt;span class=&quot;c1&quot;&gt;;Jump endVBlank&lt;/span&gt;
+&lt;span class=&quot;nl&quot;&gt;displayHashEnd:&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Afin de séparer l’affichage en plusieurs parties (pour ne pas dépasser le nombre de cycles) j’utilise la variable &lt;code class=&quot;highlighter-rouge&quot;&gt;DisplayHash&lt;/code&gt; pour savoir quelle partie je dois afficher.&lt;br /&gt;
+Si mes calculs sont bons, je dépasse jamais la limite des &lt;strong&gt;4560 cycles&lt;/strong&gt; !&lt;/p&gt;
+
+&lt;p&gt;Si &lt;code class=&quot;highlighter-rouge&quot;&gt;DisplayHash&lt;/code&gt; est égal à &lt;strong&gt;1&lt;/strong&gt; j’incrémente sa valeur (pour le prochain passage dans VBlank) puis je génère l’affichage du texte en commençant par remettre toutes les tiles de la ligne à &lt;strong&gt;0&lt;/strong&gt; puis en affichant le contenu de &lt;code class=&quot;highlighter-rouge&quot;&gt;CharBuffer&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;Si &lt;code class=&quot;highlighter-rouge&quot;&gt;DisplayHash&lt;/code&gt; est égal à &lt;strong&gt;2&lt;/strong&gt; alors je procède à l’affichage du hash sur &lt;code class=&quot;highlighter-rouge&quot;&gt;5&lt;/code&gt; lignes de &lt;code class=&quot;highlighter-rouge&quot;&gt;4 * 2&lt;/code&gt; caractères (pour une représentation hexadécimale).&lt;br /&gt;
+Je parcours donc les octets en commençant par &lt;code class=&quot;highlighter-rouge&quot;&gt;StateA&lt;/code&gt;, puis tous les 4 octets je passe à la ligne suivante (les 5 variables &lt;code class=&quot;highlighter-rouge&quot;&gt;State&lt;/code&gt; se suivent dans la mémoire, il suffit donc juste d’incrémenter l’adresse depuis le point de départ &lt;code class=&quot;highlighter-rouge&quot;&gt;StateA&lt;/code&gt;).&lt;/p&gt;
+
+&lt;p&gt;Pour avoir l’affichage en hexadécimal, je récupère dans un premier temps les &lt;strong&gt;4 bits&lt;/strong&gt; de poids fort (via &lt;strong&gt;4 décalages vers la droite&lt;/strong&gt;).&lt;br /&gt;
+Si la valeur est supérieure à &lt;strong&gt;9&lt;/strong&gt; c’est qu’il s’agit d’une lettre auquel cas j’ajoute &lt;strong&gt;7&lt;/strong&gt; en plus de &lt;strong&gt;48&lt;/strong&gt;, ainsi je fais correspondre avec le bon caractère (le décalage de &lt;strong&gt;7&lt;/strong&gt; vient des &lt;strong&gt;7&lt;/strong&gt; caractères entre les chiffres et les lettres dans la &lt;a href=&quot;https://fr.wikipedia.org/wiki/American_Standard_Code_for_Information_Interchange&quot; target=&quot;_blank&quot;&gt;table ASCII&lt;/a&gt;).&lt;/p&gt;
+
+&lt;p&gt;Le principe est identique pour les &lt;strong&gt;4 bits&lt;/strong&gt; de poids faible, je les récupère avec un &lt;code class=&quot;highlighter-rouge&quot;&gt;and 0b00001111&lt;/code&gt; puis je fais exactement les mêmes opérations que pour les 4 bits précédents.&lt;/p&gt;
+
+&lt;p&gt;Pour finir, je repasse &lt;code class=&quot;highlighter-rouge&quot;&gt;DisplayHash&lt;/code&gt; à &lt;strong&gt;0&lt;/strong&gt; afin de permettre de relancer un nouveau calcul SHA1 et donc un nouvel affichage.&lt;/p&gt;
+
+&lt;h2 id=&quot;conclusion&quot;&gt;Conclusion&lt;/h2&gt;
+
+&lt;p&gt;Au début j’avais un doute sur la nécessité de faire un article sur ce sujet.&lt;br /&gt;
+Puis quand j’ai commencé à me renseigner et à faire mes tests, j’ai trouvé ça vraiment très intéressant et il aurait été dommage de ne pas partager tout ça !&lt;/p&gt;
+
+&lt;p&gt;Même si ça semble très simple, il y a assez de possibilités et de subtilités pour justifier la rédaction d’un article.&lt;/p&gt;
+
+&lt;p&gt;Comme d’habitude, il y a encore pas mal d’optimisations possibles et je suis preneur de vos propositions !&lt;/p&gt;
+
+&lt;p&gt;Et encore une fois, un grand merci à &lt;a href=&quot;https://ark444.github.io/&quot; target=&quot;_blank&quot;&gt;entropyQueen&lt;/a&gt; pour l’idée du projet et pour le test de mon code en conditions réelles sur sa GameBoy !&lt;br /&gt;
+&lt;em&gt;(Hé oui, je n’ai pas encore le matériel pour tester sur ma GB, je me contente de l’émulateur)&lt;/em&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;sources-et-inspirations&quot;&gt;Sources et inspirations&lt;/h2&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;https://github.com/Elrindel/SHA1-GUI-GameBoy&quot; target=&quot;_blank&quot;&gt;Code du projet&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://github.com/Elrindel/GameBoy-Tiles-Fonts&quot; target=&quot;_blank&quot;&gt;Polices d’écriture GB&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;implementation-sha1-sur-gameboy&quot; target=&quot;_blank&quot;&gt;Mon premier article&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;specifications-gameboy&quot; target=&quot;_blank&quot;&gt;Spécifications GameBoy&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://ark444.github.io/&quot; target=&quot;_blank&quot;&gt;Blog d’entropyQueen&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;http://furrtek.free.fr/?a=gbasm&quot; target=&quot;_blank&quot;&gt;Article de Furrtek&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://blog.flozz.fr/2019/09/18/developpement-gameboy-1bis-re-hello-world/&quot; target=&quot;_blank&quot;&gt;Suite d’articles de FLOZz&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+        <pubDate>Sat, 02 May 2020 14:45:45 +0200</pubDate>
+        <link>https://elrindel.github.io/suite-sha1-sur-gameboy-interface-graphique</link>
+        <guid isPermaLink="true">https://elrindel.github.io/suite-sha1-sur-gameboy-interface-graphique</guid>
+        
+        
+        <category>gameboy</category>
+        
+      </item>
     
       <item>
         <title>Implémentation SHA1 sur GameBoy</title>
