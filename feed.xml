@@ -5,9 +5,278 @@
     <description>Mes projets</description>
     <link>https://elrindel.github.io/</link>
     <atom:link href="https://elrindel.github.io/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Fri, 22 May 2020 21:38:59 +0200</pubDate>
-    <lastBuildDate>Fri, 22 May 2020 21:38:59 +0200</lastBuildDate>
+    <pubDate>Sat, 18 Jul 2020 17:23:08 +0200</pubDate>
+    <lastBuildDate>Sat, 18 Jul 2020 17:23:08 +0200</lastBuildDate>
     <generator>Jekyll v4.0.0</generator>
+    
+      <item>
+        <title>Programmer une mémoire Flash (EEPROM) 32 broches avec un Arduino</title>
+        <description>&lt;p&gt;Pour un projet, que vous verrez dans mon prochain article, j’avais besoin d’utiliser de la mémoire flash mais je n’avais pas de programmateur.&lt;/p&gt;
+
+&lt;p&gt;Souhaitant proposer une solution facilement accessible (sans devoir acheter un programmateur à 50€ minimum), je me suis documenté pour programmer ma mémoire flash avec le matériel déjà en ma possession et qu’on retrouve chez beaucoup de bidouilleurs.&lt;/p&gt;
+
+&lt;p&gt;J’avais le choix entre un &lt;code class=&quot;highlighter-rouge&quot;&gt;Raspberry Pi&lt;/code&gt; et un &lt;code class=&quot;highlighter-rouge&quot;&gt;Arduino Uno&lt;/code&gt;.&lt;br /&gt;
+J’ai une grosse préférence pour l’&lt;strong&gt;Arduino&lt;/strong&gt;. De plus, il s’avère que les mémoires que je dois programmer fonctionnent sous une tension de &lt;strong&gt;5V&lt;/strong&gt;, ce qui est le cas de mon &lt;code class=&quot;highlighter-rouge&quot;&gt;Arduino Uno&lt;/code&gt;.&lt;br /&gt;
+Le &lt;strong&gt;Raspberry Pi&lt;/strong&gt; aurait compliqué les choses avec les &lt;strong&gt;3.3V&lt;/strong&gt; des GPIO.&lt;br /&gt;
+D’ailleurs assurez vous de pas raccorder une mémoire &lt;strong&gt;3.3V&lt;/strong&gt; sur du &lt;strong&gt;5V&lt;/strong&gt; au risque de la griller.&lt;/p&gt;
+
+&lt;p&gt;C’est donc l’&lt;code class=&quot;highlighter-rouge&quot;&gt;Arduino Uno&lt;/code&gt; qui me servira de programmateur d’&lt;strong&gt;EEPROM&lt;/strong&gt; !&lt;/p&gt;
+
+&lt;h2 id=&quot;solutions-existantes&quot;&gt;Solutions existantes&lt;/h2&gt;
+
+&lt;p&gt;Il est important de préciser que je veux programmer des mémoires de &lt;strong&gt;512Ko&lt;/strong&gt; via une interface &lt;code class=&quot;highlighter-rouge&quot;&gt;parallèle&lt;/code&gt; ce qui implique d’avoir des &lt;strong&gt;mémoires flash&lt;/strong&gt; avec au moins &lt;strong&gt;32 broches&lt;/strong&gt; (voir ci-dessous pour les détails).&lt;/p&gt;
+
+&lt;p&gt;Evidemment je suis pas le premier à me dire qu’on peut programmer des &lt;strong&gt;EEPROM&lt;/strong&gt; avec un &lt;code class=&quot;highlighter-rouge&quot;&gt;Arduino Uno&lt;/code&gt; et j’ai effectivement trouvé deux ou trois projets à ce sujet sur internet.&lt;br /&gt;
+Ces derniers sont soit foireux, soit leur code me plait pas, soit ils sont incomplets … J’ai donc décidé de faire ma propre version que je vais vous partager ici !&lt;/p&gt;
+
+&lt;h3 id=&quot;comment-lire-et-écrire-une-mémoire-flash-&quot;&gt;Comment lire et écrire une mémoire flash ?&lt;/h3&gt;
+
+&lt;p&gt;Comme évoqué ci-dessus, je vais utiliser des mémoires avec une interface &lt;code class=&quot;highlighter-rouge&quot;&gt;parallèle&lt;/code&gt; et &lt;strong&gt;32 broches&lt;/strong&gt;.&lt;/p&gt;
+
+&lt;p&gt;Une puce mémoire avec interface &lt;code class=&quot;highlighter-rouge&quot;&gt;parallèle&lt;/code&gt; possède un certain nombre d’entrées allant de &lt;code class=&quot;highlighter-rouge&quot;&gt;A0&lt;/code&gt; à &lt;code class=&quot;highlighter-rouge&quot;&gt;AMS&lt;/code&gt; &lt;em&gt;(Most signifiant address)&lt;/em&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;A0&lt;/code&gt; étant donc le bit de poids faible et &lt;code class=&quot;highlighter-rouge&quot;&gt;AMS&lt;/code&gt; le bit de poids fort.&lt;br /&gt;
+Ces entrées correspondent à l’adresse mémoire ciblée et leur nombre va donc dépendre de la taille de la mémoire.&lt;/p&gt;
+
+&lt;p&gt;Par exemple, pour &lt;strong&gt;512Ko&lt;/strong&gt; on aura &lt;strong&gt;19 entrées&lt;/strong&gt;, donc de &lt;code class=&quot;highlighter-rouge&quot;&gt;A0&lt;/code&gt; à &lt;code class=&quot;highlighter-rouge&quot;&gt;A18&lt;/code&gt;, car il faut &lt;strong&gt;19 bits&lt;/strong&gt; pour atteindre toutes les adresses mémoire : &lt;strong&gt;512Ko&lt;/strong&gt; = &lt;strong&gt;524288 octets&lt;/strong&gt; (oui je devrais écrire Kio pour être exact … mais on se comprend ^^), vu qu’on commence à l’adresse 0, la dernière adresse sera &lt;code class=&quot;highlighter-rouge&quot;&gt;524287&lt;/code&gt; ce qui nécessite exactement &lt;strong&gt;19 bits&lt;/strong&gt;.&lt;/p&gt;
+
+&lt;p&gt;Ensuite on trouve les &lt;strong&gt;8&lt;/strong&gt; broches &lt;code class=&quot;highlighter-rouge&quot;&gt;DQ0&lt;/code&gt; à &lt;code class=&quot;highlighter-rouge&quot;&gt;DQ7&lt;/code&gt; qui sont des sorties en mode &lt;strong&gt;lecture&lt;/strong&gt; et des entrées en mode &lt;strong&gt;écriture&lt;/strong&gt; !&lt;br /&gt;
+Lors de la &lt;strong&gt;lecture&lt;/strong&gt;, elles vont prendre la valeur de la donnée contenue à l’adresse mémoire ciblée.&lt;br /&gt;
+Et inversement, lors de l’&lt;strong&gt;écriture&lt;/strong&gt;, l’adresse mémoire ciblée va prendre la valeur qu’on enverra sur ces broches.&lt;/p&gt;
+
+&lt;p&gt;Le mode va dépendre de l’état des 3 entrées suivantes : &lt;code class=&quot;highlighter-rouge&quot;&gt;CE#&lt;/code&gt; &lt;em&gt;(Chip Enable)&lt;/em&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;OE#&lt;/code&gt; &lt;em&gt;(Output Enable)&lt;/em&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;WE#&lt;/code&gt; &lt;em&gt;(Write Enable)&lt;/em&gt;&lt;br /&gt;
+&lt;strong&gt;Ces entrées sont activées à l’état bas (et donc désactivées à l’état haut), d’ailleurs on peut constater cela via la notation &lt;code class=&quot;highlighter-rouge&quot;&gt;#&lt;/code&gt;.&lt;/strong&gt;&lt;/p&gt;
+
+&lt;h4 id=&quot;la-lecture&quot;&gt;La lecture&lt;/h4&gt;
+
+&lt;p&gt;Le mode &lt;strong&gt;lecture&lt;/strong&gt; est le plus simple car il suffit de désactiver &lt;code class=&quot;highlighter-rouge&quot;&gt;WE#&lt;/code&gt; puis d’activer &lt;code class=&quot;highlighter-rouge&quot;&gt;CE#&lt;/code&gt; et &lt;code class=&quot;highlighter-rouge&quot;&gt;OE#&lt;/code&gt; pour obtenir directement l’octet de l’adresse ciblée par les entrées &lt;code class=&quot;highlighter-rouge&quot;&gt;A0&lt;/code&gt; à &lt;code class=&quot;highlighter-rouge&quot;&gt;AMS&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;Voici le diagramme représentant la lecture d’une mémoire flash &lt;code class=&quot;highlighter-rouge&quot;&gt;SST39SF040&lt;/code&gt; (valable pour beaucoup d’autres mémoires) :&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/images/39sf040-read-diagram.jpg&quot; alt=&quot;39SF040 Read Diagram&quot; title=&quot;39SF040 Read Diagram&quot; class=&quot;center lightbox&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Les seules limitations sont donc les temps d’attente entre l’assignation de l’adresse mémoire et l’accès aux données.&lt;br /&gt;
+Ces temps vont varier suivant les modèles, on parle de quelques dizaines de nanosecondes, mais il s’agit d’une durée minimale, on peut très bien attendre plus longtemps pour être certain d’accéder aux données.&lt;/p&gt;
+
+&lt;h4 id=&quot;lécriture&quot;&gt;L’écriture&lt;/h4&gt;
+
+&lt;p&gt;Pour l’&lt;strong&gt;écriture&lt;/strong&gt; c’est plus délicat car il faut suivre une procédure pour réellement écrire dans la mémoire.&lt;br /&gt;
+En effet, il ne suffit pas d’activer &lt;code class=&quot;highlighter-rouge&quot;&gt;WE#&lt;/code&gt; avec l’adresse et l’octet souhaités !&lt;/p&gt;
+
+&lt;p&gt;La procédure à suivre s’appelle une &lt;strong&gt;séquence&lt;/strong&gt; qui correspond à l’&lt;strong&gt;envoi&lt;/strong&gt; de certaines données à certaines adresses précises pour basculer dans le mode souhaité.&lt;br /&gt;
+Ces données de &lt;strong&gt;séquence&lt;/strong&gt; ne sont pas écrites dans la mémoire (il n’y a donc pas de corruption de données en mémoire, heureusement).&lt;/p&gt;
+
+&lt;p&gt;Via différentes &lt;strong&gt;séquences&lt;/strong&gt; on peut ainsi exécuter quelques commandes sur la mémoire, comme :&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Ecrire une donnée&lt;/li&gt;
+  &lt;li&gt;Effacer une adresse mémoire&lt;/li&gt;
+  &lt;li&gt;Effacer l’ensemble de la mémoire&lt;/li&gt;
+  &lt;li&gt;Récupérer l’identifiant du fabricant et le modèle&lt;/li&gt;
+  &lt;li&gt;Certaines mémoires proposent aussi un mode verrouillage (pour bloquer l’écriture)&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Ces &lt;strong&gt;séquences&lt;/strong&gt; sont disponibles dans le &lt;code class=&quot;highlighter-rouge&quot;&gt;datasheet&lt;/code&gt; de chaque mémoire !&lt;br /&gt;
+Le &lt;code class=&quot;highlighter-rouge&quot;&gt;datasheet&lt;/code&gt; est un document indispensable en électronique, il regroupe toutes les informations techniques ainsi que des exemples d’utilisation (de temps en temps) pour chaque composant.&lt;br /&gt;
+Une simple recherche suffit à trouver un &lt;code class=&quot;highlighter-rouge&quot;&gt;datasheet&lt;/code&gt; en utilisant tout simplement les mots clés &lt;code class=&quot;highlighter-rouge&quot;&gt;datasheet REFERENCE&lt;/code&gt; &lt;em&gt;(&lt;strong&gt;REFERENCE&lt;/strong&gt; étant évidemment la référence du composant que vous recherchez)&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;Concernant les mémoires qui m’intéressent pour mon projet, je retrouve quasiment toujours les mêmes &lt;strong&gt;séquences&lt;/strong&gt;.&lt;br /&gt;
+Pour le moment j’ai trouvé seulement 2 variantes. Dans tous les cas il suffit de lire la documentation pour savoir quelle &lt;strong&gt;séquence&lt;/strong&gt; utiliser pour votre mémoire et adapter le programme au besoin (voir plus bas).&lt;/p&gt;
+
+&lt;p&gt;Par exemple, voilà les séquences disponibles pour la mémoire &lt;code class=&quot;highlighter-rouge&quot;&gt;SST39SF040&lt;/code&gt; :&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/images/39sf040-sequences.jpg&quot; alt=&quot;39SF040 Sequences&quot; title=&quot;39SF040 Sequences&quot; class=&quot;center lightbox&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Et enfin le diagramme représentant l’écriture :&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/images/39sf040-write-diagram.jpg&quot; alt=&quot;39SF040 Write Diagram&quot; title=&quot;39SF040 Write Diagram&quot; class=&quot;center lightbox&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Comme pour la lecture, il est nécessaire de respecter certains timing.&lt;/p&gt;
+
+&lt;p&gt;Ceci dit, l’&lt;code class=&quot;highlighter-rouge&quot;&gt;Arduino Uno&lt;/code&gt; n’est pas très rapide et la majorité des opérations peuvent passer sans gérer les timing si le programme n’est pas très optimisé, mais il est préférable de les gérer pour pas avoir de surprise.&lt;/p&gt;
+
+&lt;h2 id=&quot;les-composants-pour-fabriquer-votre-propre-programmateur-deeprom&quot;&gt;Les composants pour fabriquer votre propre programmateur d’EEPROM&lt;/h2&gt;
+
+&lt;p&gt;Faisons les comptes des broches :&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;19&lt;/code&gt; pour l’adresse&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;8&lt;/code&gt; pour les données&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;3&lt;/code&gt; pour les contrôles&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;30&lt;/code&gt; broches qu’on va devoir manipuler (les 2 restantes correspondent à l’alimentation).&lt;/p&gt;
+
+&lt;p&gt;L’&lt;code class=&quot;highlighter-rouge&quot;&gt;Arduino Uno&lt;/code&gt; possède &lt;code class=&quot;highlighter-rouge&quot;&gt;14&lt;/code&gt; entrées/sorties numériques et &lt;code class=&quot;highlighter-rouge&quot;&gt;6&lt;/code&gt; entrées analogiques.&lt;br /&gt;
+On peut déjà oublier &lt;code class=&quot;highlighter-rouge&quot;&gt;2&lt;/code&gt; entrées/sortie numériques (pin 0 et pin 1) car elles sont utilisées pour la communication série (dont on aura besoin pour communiquer avec le PC).&lt;br /&gt;
+Heureusement on peut utiliser les &lt;code class=&quot;highlighter-rouge&quot;&gt;6&lt;/code&gt; entrées analogique comme entrée/sortie numérique !&lt;/p&gt;
+
+&lt;p&gt;Ce qui fait un total de &lt;code class=&quot;highlighter-rouge&quot;&gt;18&lt;/code&gt; entrées/sorties exploitables avec l’&lt;code class=&quot;highlighter-rouge&quot;&gt;Arduino Uno&lt;/code&gt; !&lt;/p&gt;
+
+&lt;p&gt;Ce n’est donc pas suffisant mais il existe au moins deux solutions très simples à ce problème :&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;2 x &lt;code class=&quot;highlighter-rouge&quot;&gt;74HC595&lt;/code&gt; : Registre à décalage 8 bits (voir ci-dessous pour plus de détails)&lt;/li&gt;
+  &lt;li&gt;2 x &lt;code class=&quot;highlighter-rouge&quot;&gt;74HC574&lt;/code&gt; : Bascule 8 bits&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;Personnellement j’ai choisi la première solution mais les deux sont tout à fait viables pour ajouter des sorties.&lt;br /&gt;
+Les &lt;strong&gt;registres à décalage&lt;/strong&gt; ont cependant un très gros avantage car on peut en ajouter autant qu’on veut à la suite sans avoir besoin de sacrifier une sortie de l’Arduino à chaque nouvelle puce (contrairement aux bascules qui doivent être pilotées indépendamment les unes des autres).&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;D’ailleurs, petite info intéressante à ce sujet, on retrouve généralement des registres à décalage dans les bandeaux de led paramétrables. Si le bandeau permet de contrôler n’importe quelle led indépendamment des autres alors il y a de fortes chances pour que chaque led possède un registre à décalage.&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;C’est bien beau toutes ces entrées/sorties mais il faut les raccorder aux broches de la mémoire flash.&lt;br /&gt;
+Pour faire cela tout en pouvant insérer/retirer la puce mémoire facilement, il faut utiliser soit un &lt;strong&gt;socket&lt;/strong&gt;, soit une &lt;strong&gt;breadboard&lt;/strong&gt;.&lt;/p&gt;
+
+&lt;p&gt;L’utilisation d’un &lt;strong&gt;socket&lt;/strong&gt; implique la conception d’un circuit imprimé (enfin il est toujours possible de faire ça en l’air évidemment, mais c’est pas très propre/fiable).&lt;br /&gt;
+Donc si vous avez une &lt;strong&gt;plaque de prototypage&lt;/strong&gt; ou la possibilité de faire votre propre &lt;strong&gt;PCB&lt;/strong&gt;, vous pouvez étudier cette solution, sinon ça sera une &lt;strong&gt;breadboard&lt;/strong&gt; !&lt;br /&gt;
+&lt;em&gt;Il est également possible de faire fabriquer un circuit via des sites comme JLCPCB, PCBWay etc…&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;J’ai ce qu’il faut pour faire des &lt;strong&gt;circuits imprimés simple face&lt;/strong&gt; du coup je pars sur la solution &lt;strong&gt;socket&lt;/strong&gt; afin de faire quelque chose d’un peu plus propre qu’un simple prototype.&lt;br /&gt;
+D’ailleurs, en parlant de &lt;strong&gt;socket&lt;/strong&gt;, il est temps d’aborder le sujet du &lt;strong&gt;package (boitier)&lt;/strong&gt; de la puce ! Afin de pouvoir la manipuler facilement j’ai choisi du &lt;code class=&quot;highlighter-rouge&quot;&gt;DIP32&lt;/code&gt;.&lt;br /&gt;
+Dans une seconde version je prévois l’utilisation du &lt;code class=&quot;highlighter-rouge&quot;&gt;PLCC32&lt;/code&gt; qui peut également être manipulé facilement avec la pince qui va bien.&lt;/p&gt;
+
+&lt;p&gt;Donc, pour résumer, les composants nécessaires sont :&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;1 x &lt;code class=&quot;highlighter-rouge&quot;&gt;Arduino Uno&lt;/code&gt; (ou autre avec au moins autant de pins que le &lt;code class=&quot;highlighter-rouge&quot;&gt;Uno&lt;/code&gt; et la bonne tension)&lt;/li&gt;
+  &lt;li&gt;2 x &lt;code class=&quot;highlighter-rouge&quot;&gt;74HC595&lt;/code&gt;&lt;/li&gt;
+  &lt;li&gt;1 x &lt;code class=&quot;highlighter-rouge&quot;&gt;Socket DIP32&lt;/code&gt; ou &lt;code class=&quot;highlighter-rouge&quot;&gt;Breadboad&lt;/code&gt; (si vous avez ou non la possibilité de faire un PCB)&lt;/li&gt;
+  &lt;li&gt;Au moins une mémoire flash en boitier &lt;code class=&quot;highlighter-rouge&quot;&gt;DIP32&lt;/code&gt;, dans mon cas ça sera une &lt;code class=&quot;highlighter-rouge&quot;&gt;39SF040&lt;/code&gt; (pour le boitier &lt;code class=&quot;highlighter-rouge&quot;&gt;PLCC32&lt;/code&gt; j’ai des &lt;code class=&quot;highlighter-rouge&quot;&gt;AM29F040&lt;/code&gt;)&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Vous pouvez trouver l’ensemble de ces composants sur internet pour vraiment pas chère. Si vous n’êtes pas trop pressés vous trouverez votre bonheur sur des sites comme &lt;strong&gt;Aliexpress&lt;/strong&gt; ou &lt;strong&gt;Ebay&lt;/strong&gt;.&lt;/p&gt;
+
+&lt;h3 id=&quot;explications-registre-à-décalage-74hc595&quot;&gt;Explications registre à décalage 74HC595&lt;/h3&gt;
+
+&lt;p&gt;Ce registre à décalage possède &lt;strong&gt;16 broches&lt;/strong&gt; dont &lt;strong&gt;9 sont des sorties&lt;/strong&gt; (les broches de &lt;code class=&quot;highlighter-rouge&quot;&gt;QA&lt;/code&gt; à &lt;code class=&quot;highlighter-rouge&quot;&gt;QH&lt;/code&gt; ainsi que &lt;code class=&quot;highlighter-rouge&quot;&gt;QH'&lt;/code&gt;).&lt;/p&gt;
+
+&lt;p&gt;Lors d’un cycle, chaque sortie va prendre la valeur de la sortie précédente, excepté &lt;code class=&quot;highlighter-rouge&quot;&gt;QA&lt;/code&gt; qui prendra la valeur de l’entrée &lt;code class=&quot;highlighter-rouge&quot;&gt;SER&lt;/code&gt;, et &lt;code class=&quot;highlighter-rouge&quot;&gt;QH'&lt;/code&gt; qui est en quelque sorte une copie de &lt;code class=&quot;highlighter-rouge&quot;&gt;QH&lt;/code&gt; (et prendra donc la valeur de &lt;code class=&quot;highlighter-rouge&quot;&gt;QG&lt;/code&gt;).&lt;/p&gt;
+
+&lt;p&gt;Le mieux pour illustrer ces cycles, c’est encore de regarder le diagramme disponible dans le &lt;strong&gt;datasheet&lt;/strong&gt; du composant :&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/images/74hc595-timing-diagram.jpg&quot; alt=&quot;74HC595 Timing Diagram&quot; title=&quot;74HC595 Timing Diagram&quot; class=&quot;center lightbox&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Ce diagramme montre bien la progression d’un bit envoyé initialement via l’entrée &lt;code class=&quot;highlighter-rouge&quot;&gt;SER&lt;/code&gt; puis propagé dans chaque sortie l’une après l’autre à chaque cycle.&lt;/p&gt;
+
+&lt;p&gt;Ceci dit, ce diagramme pourrait laisser penser qu’il faut absolument jongler avec les deux horloges &lt;code class=&quot;highlighter-rouge&quot;&gt;SRCLK&lt;/code&gt; et &lt;code class=&quot;highlighter-rouge&quot;&gt;RCLK&lt;/code&gt; afin d’attribuer tous les &lt;strong&gt;bits&lt;/strong&gt; du registre, mais c’est faux !&lt;br /&gt;
+En effet, pour constater cela il faut regarder un autre diagramme, le &lt;strong&gt;diagramme logique&lt;/strong&gt; :&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/images/74hc595-logic-diagram.jpg&quot; alt=&quot;74HC595 Logic Diagram&quot; title=&quot;74HC595 Logic Diagram&quot; class=&quot;center lightbox&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;On peut constater que pour &lt;strong&gt;1 bit&lt;/strong&gt; il y a &lt;strong&gt;2 registres différents&lt;/strong&gt;, le premier permet de gérer le décalage (colonne de gauche sur le diagramme), et le second stockera la valeur pour la sortie (colonne de droite).&lt;br /&gt;
+Le premier est géré par l’horloge &lt;code class=&quot;highlighter-rouge&quot;&gt;SRCLK&lt;/code&gt; et le second par &lt;code class=&quot;highlighter-rouge&quot;&gt;RCLK&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;En clair, ça veut dire qu’on peut simplifier la gestion des horloges pour configurer l’ensemble des registres à décalage en utilisant uniquement l’horloge &lt;code class=&quot;highlighter-rouge&quot;&gt;SRCLK&lt;/code&gt; pour définir tous les &lt;strong&gt;bits&lt;/strong&gt;, puis une fois qu’ils sont tous configurés on a plus qu’à faire un coup d’horloge &lt;code class=&quot;highlighter-rouge&quot;&gt;RCLK&lt;/code&gt; pour envoyer les valeurs sur la sortie.&lt;/p&gt;
+
+&lt;p&gt;Un autre point intéressant, la sortie &lt;code class=&quot;highlighter-rouge&quot;&gt;QH'&lt;/code&gt; n’est pas liée à &lt;code class=&quot;highlighter-rouge&quot;&gt;RCLK&lt;/code&gt; ni à &lt;code class=&quot;highlighter-rouge&quot;&gt;OE#&lt;/code&gt;, on peut donc raccorder autant de puces qu’on le souhaite en série sans avoir besoin de faire un cycle &lt;code class=&quot;highlighter-rouge&quot;&gt;RCLK&lt;/code&gt; entre chaque puce et sans dépendre de l’état de &lt;code class=&quot;highlighter-rouge&quot;&gt;OE#&lt;/code&gt; !&lt;/p&gt;
+
+&lt;p&gt;Donc en reliant la sortie &lt;code class=&quot;highlighter-rouge&quot;&gt;QH'&lt;/code&gt; d’une puce à l’entrée &lt;code class=&quot;highlighter-rouge&quot;&gt;SER&lt;/code&gt; d’une autre puce, on permet aux données de passer d’une puce à l’autre.&lt;br /&gt;
+Il reste juste à relier toutes les broches communes à toutes les puces ensembles : &lt;code class=&quot;highlighter-rouge&quot;&gt;VCC&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;GND&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;RCLK&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;SRCLK&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;Les deux dernière broche, &lt;code class=&quot;highlighter-rouge&quot;&gt;OE#&lt;/code&gt; et &lt;code class=&quot;highlighter-rouge&quot;&gt;SRCLR&lt;/code&gt;, sont également communes à toutes les puces.&lt;br /&gt;
+&lt;code class=&quot;highlighter-rouge&quot;&gt;OE#&lt;/code&gt; permet d’activer les sorties, dans le cas présent elles seront toujours actives, pour cela il faut mettre cette broche à l’état bas.&lt;br /&gt;
+&lt;code class=&quot;highlighter-rouge&quot;&gt;SRCLR&lt;/code&gt; est un simple reset pour réinitialiser les registres à zéro. Ici c’est inutile, on va donc laisser cette broche à l’état haut (le reset est fait au passage à l’état bas).&lt;/p&gt;
+
+&lt;h2 id=&quot;le-schéma-électronique&quot;&gt;Le schéma électronique&lt;/h2&gt;
+
+&lt;p&gt;On a tout vu dans les chapitres précédents.&lt;br /&gt;
+Le schéma consiste donc tout simplement à raccorder les &lt;strong&gt;registres à décalage&lt;/strong&gt; ensembles, relier leurs sorties sur les entrées &lt;code class=&quot;highlighter-rouge&quot;&gt;A0&lt;/code&gt; à &lt;code class=&quot;highlighter-rouge&quot;&gt;AMS&lt;/code&gt; de la mémoire, relier les alimentations puis apporter tout le reste sur des connecteurs pour y raccorder l’&lt;code class=&quot;highlighter-rouge&quot;&gt;Arduino&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;Sur le schéma j’ai directement inséré l’&lt;code class=&quot;highlighter-rouge&quot;&gt;Arduino Uno&lt;/code&gt; comme pour réaliser un &lt;strong&gt;shield arduino&lt;/strong&gt; (ça permet aussi de voir les raccordements à faire ^^).&lt;br /&gt;
+Mais lors de la fabrication du circuit, je n’ai pas fait de &lt;strong&gt;shield arduino&lt;/strong&gt; car c’était trop délicat à faire avec un &lt;strong&gt;circuit simple face&lt;/strong&gt; (et pour tout vous dire, j’ai foiré ma tentative de shield …).&lt;br /&gt;
+Je suis donc parti sur un simple PCB avec des connecteurs classiques en &lt;strong&gt;2.54mm&lt;/strong&gt; (standard qu’on retrouve un peu partout, Arduino, breadboard etc…).&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/images/arduino-flash-programmer-sch.jpg&quot; alt=&quot;Arduino Flash Programmer Schéma&quot; title=&quot;Arduino Flash Programmer Schéma&quot; class=&quot;center lightbox&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;J’ai fait le choix d’utiliser seulement &lt;strong&gt;2 registres à décalage&lt;/strong&gt;, ce qui fait &lt;strong&gt;16 sorties&lt;/strong&gt;, je dois donc gérer les &lt;strong&gt;3 dernières&lt;/strong&gt; (&lt;code class=&quot;highlighter-rouge&quot;&gt;A16&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;A17&lt;/code&gt; et &lt;code class=&quot;highlighter-rouge&quot;&gt;A18&lt;/code&gt;) directement avec les sorties de l’&lt;code class=&quot;highlighter-rouge&quot;&gt;Arduino&lt;/code&gt; (donc sur un connecteur).&lt;/p&gt;
+
+&lt;h2 id=&quot;aperçu-de-mon-prototype&quot;&gt;Aperçu de mon prototype&lt;/h2&gt;
+
+&lt;p&gt;Comme précisé précédemment, je peux fabriquer uniquement des circuits imprimés à une face, ce qui n’est pas suffisant pour un tel projet si on veut faire ça proprement.&lt;/p&gt;
+
+&lt;p&gt;En effet, il faudra forcément croiser certaines liaisons pour un tel montage, ce qui nécessite d’avoir au moins deux couches de cuivre.&lt;/p&gt;
+
+&lt;p&gt;J’ai donc fait comme je pouvais avec une couche et j’ai fini les liaisons manquantes avec quelques morceaux de fil.&lt;/p&gt;
+
+&lt;p&gt;C’est donc un prototype loin d’être parfait (c’est un peu le rôle d’un prototype d’ailleurs) et je préfère ne pas partager les fichiers de cette conception car j’estime que ce n’est pas assez propre pour l’être.&lt;br /&gt;
+&lt;em&gt;(Il est cependant possible que je fasse évoluer ce projet en faisant un beau PCB 2 couches, mais ça sera pas avant 2021 je pense).&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;Mais voilà quand même un aperçu :&lt;/p&gt;
+
+&lt;div class=&quot;gallery center&quot;&gt;
+    &lt;img src=&quot;/assets/images/arduino-flash-programmer-prototype-1.jpg&quot; alt=&quot;Arduino Flash Programmer Prototype&quot; title=&quot;Arduino Flash Programmer Prototype&quot; class=&quot;lightbox&quot; /&gt;
+    &lt;img src=&quot;/assets/images/arduino-flash-programmer-prototype-2.jpg&quot; alt=&quot;Arduino Flash Programmer Prototype&quot; title=&quot;Arduino Flash Programmer Prototype&quot; class=&quot;lightbox&quot; /&gt;
+    &lt;img src=&quot;/assets/images/arduino-flash-programmer-prototype-3.jpg&quot; alt=&quot;Arduino Flash Programmer Prototype&quot; title=&quot;Arduino Flash Programmer Prototype&quot; class=&quot;lightbox&quot; /&gt;
+&lt;/div&gt;
+
+&lt;h2 id=&quot;le-software-pour-gérer-la-programmation-de-la-mémoire&quot;&gt;Le software pour gérer la programmation de la mémoire&lt;/h2&gt;
+
+&lt;p&gt;Il y a donc deux parties à coder, une pour l’&lt;code class=&quot;highlighter-rouge&quot;&gt;Arduino&lt;/code&gt; (en &lt;strong&gt;C&lt;/strong&gt;), l’autre pour le PC (en &lt;strong&gt;Python&lt;/strong&gt;).&lt;/p&gt;
+
+&lt;p&gt;Afin de faciliter l’utilisation, j’ai fait en sorte de pouvoir accéder à toutes les commandes sur l’&lt;code class=&quot;highlighter-rouge&quot;&gt;Arduino&lt;/code&gt; sans utiliser le client en &lt;strong&gt;python&lt;/strong&gt; sur le PC.&lt;/p&gt;
+
+&lt;p&gt;Il est donc possible de manipuler la mémoire flash via un simple &lt;code class=&quot;highlighter-rouge&quot;&gt;moniteur série&lt;/code&gt; comme celui proposé dans l’&lt;code class=&quot;highlighter-rouge&quot;&gt;IDE Arduino&lt;/code&gt; ou tout autre client dans le genre comme &lt;code class=&quot;highlighter-rouge&quot;&gt;Putty&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;C’était surtout pratique pour les tests, mais désormais je n’utilise plus que mon client en &lt;strong&gt;python&lt;/strong&gt; !&lt;/p&gt;
+
+&lt;h3 id=&quot;arduino&quot;&gt;Arduino&lt;/h3&gt;
+
+&lt;p&gt;&lt;strong&gt;ATTENTION : Comme je l’ai déjà précisé dans l’introduction de cet article, j’ai des mémoires qui fonctionnent sous une tension de 5V et mon &lt;code class=&quot;highlighter-rouge&quot;&gt;Arduino Uno&lt;/code&gt; est également en 5V.&lt;/strong&gt;&lt;br /&gt;
+&lt;strong&gt;Il est TRES IMPORTANT de vous assurer que votre mémoire et votre Arduino fonctionnement avec la même tension (pas seulement au niveau de l’alimentation mais aussi au niveau des sorties de l’Arduino) !&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;J’ai fait deux version, une optimisée et compatible uniquement &lt;code class=&quot;highlighter-rouge&quot;&gt;Uno&lt;/code&gt; et &lt;code class=&quot;highlighter-rouge&quot;&gt;Nano&lt;/code&gt; (et normalement &lt;code class=&quot;highlighter-rouge&quot;&gt;Due&lt;/code&gt; aussi), ainsi qu’une pour les autres cartes avec assez de pins comme &lt;code class=&quot;highlighter-rouge&quot;&gt;Mega&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;Yun&lt;/code&gt; ou &lt;code class=&quot;highlighter-rouge&quot;&gt;Micro&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;La version pour les autres cartes fonctionne aussi sur &lt;code class=&quot;highlighter-rouge&quot;&gt;Uno&lt;/code&gt; et &lt;code class=&quot;highlighter-rouge&quot;&gt;Nano&lt;/code&gt; mais je trouve le code vraiment moche et clairement pas optimisé.&lt;br /&gt;
+La seule différence étant la manipulation des &lt;strong&gt;registres des ports&lt;/strong&gt; de l’&lt;code class=&quot;highlighter-rouge&quot;&gt;Arduino&lt;/code&gt; sur la version optimisée alors que l’autre version utilise les fonctions &lt;code class=&quot;highlighter-rouge&quot;&gt;Arduino&lt;/code&gt; pour faire ces manipulations (fonctions vraiment lourdes en temps d’exécution, et il faut bien l’avouer, c’est moche).&lt;br /&gt;
+Le problème c’est que ces &lt;strong&gt;registres&lt;/strong&gt; ne sont pas les mêmes sur toutes les cartes et ils sont même dans le désordre sur certaines …&lt;br /&gt;
+D’ailleurs, c’est surtout le fait que ce soit dans le désordre qui est problématique car dans le cas contraire j’aurais pu mapper les bons &lt;strong&gt;registres&lt;/strong&gt; suivant la carte sélectionnée lors de la compilation …&lt;/p&gt;
+
+&lt;p&gt;Pour plus de détails sur l’utilisation des &lt;strong&gt;registres&lt;/strong&gt; pour manipuler les pins de l’&lt;code class=&quot;highlighter-rouge&quot;&gt;Arduino&lt;/code&gt; :&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;https://www.arduino.cc/en/Reference/PortManipulation&quot; target=&quot;_blank&quot;&gt;Arduino Port Registers&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://arduino.pinout.guide/&quot; target=&quot;_blank&quot;&gt;Pinout Arduino&lt;/a&gt; &lt;em&gt;(il faut voir la valeur &lt;code class=&quot;highlighter-rouge&quot;&gt;Port Pin&lt;/code&gt; de chaque pin pour savoir sur quel registre ils sont)&lt;/em&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Je ne vais pas rentrer dans les détails du code ici.&lt;br /&gt;
+Toutes les instructions sont disponibles dans le &lt;strong&gt;readme&lt;/strong&gt; du projet : &lt;a href=&quot;TODO&quot; target=&quot;_blank&quot;&gt;Arduino Flash Programmer&lt;/a&gt;&lt;/p&gt;
+
+&lt;h3 id=&quot;pc&quot;&gt;PC&lt;/h3&gt;
+
+&lt;p&gt;Bien qu’il soit optionnel, c’est beaucoup plus simple d’utiliser un petit client en ligne de commande pour gérer la communication avec l’&lt;code class=&quot;highlighter-rouge&quot;&gt;Arduino&lt;/code&gt; plutôt que d’ouvrir un moniteur série et envoyer toutes les commandes manuellement.&lt;br /&gt;
+Surtout si il faut envoyer un certain nombre de données (comme pour écrire un fichier entier dans la mémoire).&lt;/p&gt;
+
+&lt;p&gt;Il y a donc rien d’extraordinaire dans ce code, c’est juste une gestion des arguments avec quelques petites validations, puis une communication série avec l’&lt;code class=&quot;highlighter-rouge&quot;&gt;Arduino&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;La configuration du port série est celle de l’&lt;code class=&quot;highlighter-rouge&quot;&gt;Arduino&lt;/code&gt; par défaut, à savoir &lt;strong&gt;8 data bits, no parity, 1 stop bit&lt;/strong&gt; avec une vitesse de &lt;strong&gt;115200 baud&lt;/strong&gt;.&lt;/p&gt;
+
+&lt;p&gt;Comme pour le code &lt;code class=&quot;highlighter-rouge&quot;&gt;Arduino&lt;/code&gt;, toutes les infos sont dans le &lt;strong&gt;readme&lt;/strong&gt; : &lt;a href=&quot;TODO&quot; target=&quot;_blank&quot;&gt;Arduino Flash Programmer&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;conclusion&quot;&gt;Conclusion&lt;/h2&gt;
+
+&lt;p&gt;Je suis loin d’avoir traité tout le sujet de la programmation de mémoire flash mais ça reste une bonne initiation je pense :)&lt;/p&gt;
+
+&lt;p&gt;En tout cas ce projet peut clairement évoluer, il est donc possible qu’il y ait une évolution et donc un nouvel article (c’est même fort probable) !&lt;/p&gt;
+
+&lt;p&gt;D’ailleurs, mon prochain article sera indirectement lié puisqu’il s’agira d’une mise en pratique concrète afin de réaliser un autre projet.&lt;/p&gt;
+
+&lt;h2 id=&quot;sources-et-inspirations&quot;&gt;Sources et inspirations&lt;/h2&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;TODO&quot; target=&quot;_blank&quot;&gt;Code du projet&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://www.alldatasheet.com/&quot; target=&quot;_blank&quot;&gt;AllDataSheet&lt;/a&gt; &lt;em&gt;(Bah oui, sans datasheet on fait pas grand chose ^^)&lt;/em&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://github.com/mkeller0815/MEEPROMMER&quot; target=&quot;_blank&quot;&gt;MEEPROMMER&lt;/a&gt; &lt;em&gt;(Un projet similaire qui m’a inspiré)&lt;/em&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://www.arduino.cc/en/Reference/PortManipulation&quot; target=&quot;_blank&quot;&gt;Arduino Port Registers&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://arduino.pinout.guide/&quot; target=&quot;_blank&quot;&gt;Pinout Arduino&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+        <pubDate>Sat, 18 Jul 2020 10:03:32 +0200</pubDate>
+        <link>https://elrindel.github.io/programmateur-eeprom-diy-arduino</link>
+        <guid isPermaLink="true">https://elrindel.github.io/programmateur-eeprom-diy-arduino</guid>
+        
+        
+        <category>DIY</category>
+        
+      </item>
     
       <item>
         <title>Suite SHA1 sur GameBoy : Interface graphique</title>

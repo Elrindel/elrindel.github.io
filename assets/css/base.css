@@ -326,6 +326,12 @@ ul { list-style-type: none; }
 
 .gg-menu::after { top: 6px; }
 
+.gallery.center { text-align: center; }
+
+.gallery img { display: inline-block; vertical-align: middle; max-width: 100%; width: 200px; margin: 10px; }
+
+img.lightbox { box-shadow: 0 0 4px 1px #d8d8d8; cursor: pointer; }
+
 /** ---------------------------------------------------------------------------------------- IE8 style ---------------------------------------------------------------------------------------- */
 /** ---------------------------------------------------------------------------------------- Header style ---------------------------------------------------------------------------------------- */
 #l-header { background-color: #1c3340; color: white; }

@@ -4,6 +4,8 @@
 
 #markdown-container table { font: 13.34px helvetica,arial,freesans,clean,sans-serif; color: #d8d8d8; width: 100%; }
 
+#markdown-container table.small { width: auto; }
+
 #markdown-container p { margin: 1em 0; line-height: 1.5em; }
 
 #markdown-container input[type=text], #markdown-container input[type=password], #markdown-container input[type=image], #markdown-container textarea { font: 99% helvetica,arial,freesans,sans-serif; }
@@ -79,9 +81,9 @@
 /*table style*/
 #markdown-container table { border-collapse: collapse !important; }
 
-#markdown-container table th, #markdown-container table td { border: 1px solid #ddd; padding: 5px; line-height: 1.5; vertical-align: top; border-top: 1px solid #dddddd; }
+#markdown-container table th, #markdown-container table td { border: 1px solid #868686; padding: 5px 10px; line-height: 1.5; vertical-align: top; border-top: 1px solid #868686; }
 
-#markdown-container table th { background: #EEE; }
+#markdown-container table th { background: #d8d8d8; color: #000; }
 
 #markdown-container table p { margin: 0; }
 
