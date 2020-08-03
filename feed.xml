@@ -5,9 +5,275 @@
     <description>Mes projets</description>
     <link>https://elrindel.github.io/</link>
     <atom:link href="https://elrindel.github.io/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Sat, 18 Jul 2020 18:15:52 +0200</pubDate>
-    <lastBuildDate>Sat, 18 Jul 2020 18:15:52 +0200</lastBuildDate>
+    <pubDate>Mon, 03 Aug 2020 21:02:43 +0200</pubDate>
+    <lastBuildDate>Mon, 03 Aug 2020 21:02:43 +0200</lastBuildDate>
     <generator>Jekyll v4.0.0</generator>
+    
+      <item>
+        <title>Fabrication d'une cartouche GameBoy programmable pas chère</title>
+        <description>&lt;p&gt;Tester ses programmes dans un émulateur c’est bien, mais tester sur une véritable GameBoy c’est carrément mieux.&lt;/p&gt;
+
+&lt;p&gt;Pour cela, l’unique solution consiste à avoir une &lt;strong&gt;cartouche GameBoy programmable&lt;/strong&gt;.&lt;br /&gt;
+On en trouve facilement sur internet, avec une interface USB ou un slot SD, avec ou sans RTC etc… mais il faut avouer que les prix ne sont pas très attractifs !&lt;/p&gt;
+
+&lt;p&gt;Lors de mes recherches pour me procurer une telle cartouche, je suis tombé sur des articles de &lt;strong&gt;fabrication de cartouche GB DIY&lt;/strong&gt;, il m’en fallait pas plus pour me motiver à faire ma propre cartouche.&lt;/p&gt;
+
+&lt;p&gt;Plusieurs méthodes de conception sont possibles, de la modification d’une véritable cartouche à la création complète d’une cartouche totalement custom.&lt;br /&gt;
+J’ai évidemment choisi l’option la plus simple (et la moins onéreuse), c’est à dire sacrifier une cartouche de jeu pour la rendre programmable !&lt;/p&gt;
+
+&lt;h2 id=&quot;modifications-à-apporter-à-une-cartouche-gb-afin-de-la-rendre-programmable&quot;&gt;Modifications à apporter à une cartouche GB afin de la rendre programmable&lt;/h2&gt;
+
+&lt;p&gt;Toutes les cartouches GB possèdent une mémoire qui contient le programme/jeu, mais cette mémoire ne peut pas être re-écrite (voir ci-dessous).&lt;/p&gt;
+
+&lt;p&gt;L’objectif va donc être de remplacer cette mémoire afin d’en mettre une qu’on pourra re-écrire facilement !&lt;/p&gt;
+
+&lt;h3 id=&quot;mémoire-rom-vs-flash&quot;&gt;Mémoire ROM vs Flash&lt;/h3&gt;
+
+&lt;p&gt;Pour être plus exact on devrait comparer &lt;code class=&quot;highlighter-rouge&quot;&gt;ROM&lt;/code&gt; &lt;em&gt;(&lt;strong&gt;R&lt;/strong&gt;ead-&lt;strong&gt;O&lt;/strong&gt;nly &lt;strong&gt;M&lt;/strong&gt;emory)&lt;/em&gt; et &lt;code class=&quot;highlighter-rouge&quot;&gt;EEPROM&lt;/code&gt; &lt;em&gt;(&lt;strong&gt;E&lt;/strong&gt;lectrically-&lt;strong&gt;E&lt;/strong&gt;rasable &lt;strong&gt;P&lt;/strong&gt;rogrammable &lt;strong&gt;R&lt;/strong&gt;ead-&lt;strong&gt;O&lt;/strong&gt;nly &lt;strong&gt;M&lt;/strong&gt;emory)&lt;/em&gt;, la mémoire &lt;code class=&quot;highlighter-rouge&quot;&gt;flash&lt;/code&gt; étant un type d’&lt;code class=&quot;highlighter-rouge&quot;&gt;EEPROM&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;Les cartouches sont équipées d’une mémoire &lt;code class=&quot;highlighter-rouge&quot;&gt;ROM&lt;/code&gt;. Comme le nom l’indique, il s’agit d’une mémoire accessible &lt;strong&gt;uniquement en lecture&lt;/strong&gt;.&lt;/p&gt;
+
+&lt;p&gt;La mémoire &lt;code class=&quot;highlighter-rouge&quot;&gt;flash&lt;/code&gt;, vous la connaissez probablement déjà puisqu’on la retrouve dans tout un tas de périphériques/objets comme les clés USB, cartes SD, disques SSD etc…&lt;br /&gt;
+Evidemment, cette mémoire permet un accès en lecture et en écriture.&lt;/p&gt;
+
+&lt;p&gt;Il existe différents types de &lt;strong&gt;boitier (package)&lt;/strong&gt; pour toutes ces mémoires, mais dans les cartouches GB on va quasiment toujours trouver du &lt;code class=&quot;highlighter-rouge&quot;&gt;SOIC&lt;/code&gt; ou du &lt;code class=&quot;highlighter-rouge&quot;&gt;SOP&lt;/code&gt; (il s’agit de deux formats de montage en surface très similaires), généralement avec &lt;strong&gt;32 broches&lt;/strong&gt; mais aussi avec &lt;strong&gt;44 broches&lt;/strong&gt; pour les mémoires de &lt;strong&gt;2Mo&lt;/strong&gt; et &lt;strong&gt;4Mo&lt;/strong&gt;.&lt;br /&gt;
+Dans le cas des cartouches GB, l’accès aux données est fait via une interface parallèle, c’est à dire qu’il y a un certain nombre d’entrées qui représentent l’adresse mémoire à atteindre (en binaire), et &lt;strong&gt;8 sorties&lt;/strong&gt; qui prendront la valeur présente à l’adresse mémoire demandée (toujours en binaire, donc &lt;strong&gt;1 octet&lt;/strong&gt;).&lt;/p&gt;
+
+&lt;p&gt;Si vous avez déjà lu mon précédent article, vous savez déjà cela, sinon vous pouvez aller le lire : &lt;a href=&quot;programmateur-eeprom-diy-arduino&quot; target=&quot;_blank&quot;&gt;Programmer une mémoire Flash (EEPROM) 32 broches avec un Arduino&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;Pour des boitiers équivalents, il s’avère que la répartition des broches des mémoires &lt;code class=&quot;highlighter-rouge&quot;&gt;flash&lt;/code&gt; est très similaire à celle des mémoires &lt;code class=&quot;highlighter-rouge&quot;&gt;ROM&lt;/code&gt; (voir le chapitre sur le &lt;strong&gt;remplacement de la ROM&lt;/strong&gt; pour tous les détails).&lt;br /&gt;
+De plus, on trouve des mémoires &lt;code class=&quot;highlighter-rouge&quot;&gt;flash&lt;/code&gt; avec des caractéristiques très proches des &lt;code class=&quot;highlighter-rouge&quot;&gt;ROM&lt;/code&gt; en terme de rapidité de lecture. Le tout étant d’avoir une mémoire au moins aussi rapide que la &lt;code class=&quot;highlighter-rouge&quot;&gt;ROM&lt;/code&gt; présente dans la cartouche.&lt;/p&gt;
+
+&lt;p&gt;Vous l’aurez compris, on va donc remplacer la &lt;code class=&quot;highlighter-rouge&quot;&gt;ROM&lt;/code&gt; par une mémoire &lt;code class=&quot;highlighter-rouge&quot;&gt;flash&lt;/code&gt; !&lt;/p&gt;
+
+&lt;p&gt;Pour le moment je vais faire en sorte de pouvoir extraire facilement la mémoire afin de la programmer avec mon &lt;a href=&quot;programmateur-eeprom-diy-arduino&quot; target=&quot;_blank&quot;&gt;programmer fait maison à base d’Arduino&lt;/a&gt;.&lt;br /&gt;
+J’ai donc choisi de me limiter aux boitiers &lt;code class=&quot;highlighter-rouge&quot;&gt;DIP&lt;/code&gt; et &lt;code class=&quot;highlighter-rouge&quot;&gt;PLCC&lt;/code&gt; qui ont le défaut d’être assez volumineux (surtout le &lt;code class=&quot;highlighter-rouge&quot;&gt;DIP&lt;/code&gt;) mais l’avantage d’être facilement manipulables en utilisant un &lt;strong&gt;socket&lt;/strong&gt; adapté.&lt;/p&gt;
+
+&lt;h2 id=&quot;choisir-la-bonne-cartouche-pour-remplacer-sa-mémoire-rom&quot;&gt;Choisir la bonne cartouche pour remplacer sa mémoire ROM&lt;/h2&gt;
+
+&lt;p&gt;Comme dit ci-dessus, toutes les cartouches ont une &lt;code class=&quot;highlighter-rouge&quot;&gt;ROM&lt;/code&gt;, mais il est important de vérifier que le type de boitier est bien du &lt;code class=&quot;highlighter-rouge&quot;&gt;SOIC&lt;/code&gt; ou &lt;code class=&quot;highlighter-rouge&quot;&gt;SOP&lt;/code&gt; (ou un autre type que vous pourrez dessouder avec un simple fer).&lt;br /&gt;
+Ceci dit, les cartouches qui n’ont pas ces types de boitier sont assez rares.&lt;/p&gt;
+
+&lt;p&gt;Maintenant il faut voir quels sont vos besoins. Avez-vous besoin de &lt;code class=&quot;highlighter-rouge&quot;&gt;RAM&lt;/code&gt; et/ou du &lt;code class=&quot;highlighter-rouge&quot;&gt;RTC&lt;/code&gt; ? Quelle &lt;code class=&quot;highlighter-rouge&quot;&gt;quantité de mémoire&lt;/code&gt; souhaitez vous avoir ?&lt;/p&gt;
+
+&lt;p&gt;Afin de faciliter les recherches, je me suis permis de regrouper deux bases de données que j’ai trouvé sur internet afin de centraliser les infos et avoir un formulaire de recherche efficace et complet (ce que ne proposent pas les sources en question).&lt;br /&gt;
+Voici donc ma version : &lt;a href=&quot;https://gb.flob.ovh/&quot; target=&quot;_blank&quot;&gt;Game Boy Cartridges&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;Evidemment, si vous souhaitez charger un jeu qui utilise de la &lt;code class=&quot;highlighter-rouge&quot;&gt;RAM&lt;/code&gt; et/ou le &lt;code class=&quot;highlighter-rouge&quot;&gt;RTC&lt;/code&gt; il faudra que votre &lt;strong&gt;cartouche programmable&lt;/strong&gt; possède ces éléments. C’est pourquoi il est préférable de bien sélectionner votre cartouche !&lt;/p&gt;
+
+&lt;h3 id=&quot;cartouches-avec-le-rtc&quot;&gt;Cartouches avec le RTC&lt;/h3&gt;
+
+&lt;p&gt;Pour ce qui est du &lt;code class=&quot;highlighter-rouge&quot;&gt;RTC&lt;/code&gt;, excepté si vous voulez sacrifier une cartouche Pokémon (à partir de la seconde génération), vous risquez d’avoir un peu de mal à trouver votre bonheur.&lt;/p&gt;
+
+&lt;p&gt;Vous pouvez utiliser mon formulaire de recherche avec l’option &lt;code class=&quot;highlighter-rouge&quot;&gt;RTC&lt;/code&gt; pour trouver les jeux avec cette fonctionnalité. 
+&lt;em&gt;Si vous souhaitez acheter une telle cartouche, faites attention à la version (release), si elle ne correspond pas exactement alors il n’y a probablement pas le &lt;code class=&quot;highlighter-rouge&quot;&gt;RTC&lt;/code&gt; !&lt;/em&gt;&lt;/p&gt;
+
+&lt;h3 id=&quot;cartouches-avec-de-la-ram&quot;&gt;Cartouches avec de la RAM&lt;/h3&gt;
+
+&lt;p&gt;Concernant la &lt;code class=&quot;highlighter-rouge&quot;&gt;RAM&lt;/code&gt;, là vous aurez beaucoup de choix ! Le mieux étant d’ouvrir vos cartouches pour vérifier ce qu’elles ont dans le ventre.&lt;/p&gt;
+
+&lt;p&gt;Si votre cartouche possède de la &lt;code class=&quot;highlighter-rouge&quot;&gt;RAM&lt;/code&gt;, il faudra vérifier la référence de celle-ci afin de savoir sa taille.&lt;/p&gt;
+
+&lt;p&gt;La quantité maximale de &lt;code class=&quot;highlighter-rouge&quot;&gt;RAM&lt;/code&gt; qu’un jeu peut exploiter est de &lt;strong&gt;128Ko&lt;/strong&gt; avec un &lt;code class=&quot;highlighter-rouge&quot;&gt;MBC5&lt;/code&gt; (voir ci-dessous pour plus d’informations).&lt;/p&gt;
+
+&lt;h3 id=&quot;quantité-de-mémoire-max&quot;&gt;Quantité de mémoire max&lt;/h3&gt;
+
+&lt;p&gt;Pour la quantité de mémoire, les &lt;code class=&quot;highlighter-rouge&quot;&gt;ROM&lt;/code&gt; vont de &lt;strong&gt;32Ko&lt;/strong&gt; à &lt;strong&gt;8Mo&lt;/strong&gt; mais il faut surtout regarder le &lt;code class=&quot;highlighter-rouge&quot;&gt;Mapper&lt;/code&gt; présent sur la cartouche.&lt;/p&gt;
+
+&lt;p&gt;Le &lt;code class=&quot;highlighter-rouge&quot;&gt;Mapper&lt;/code&gt; est optionnel et la taille maximale de la mémoire dépend de lui (idem pour la &lt;code class=&quot;highlighter-rouge&quot;&gt;RAM&lt;/code&gt;), voici la liste des mémoires max gérées par les différents &lt;code class=&quot;highlighter-rouge&quot;&gt;Mapper&lt;/code&gt; :&lt;/p&gt;
+
+&lt;table class=&quot;small&quot;&gt;
+    &lt;thead&gt;
+        &lt;tr&gt;
+            &lt;th&gt;Mapper&lt;/th&gt;
+            &lt;th&gt;ROM&lt;/th&gt;
+            &lt;th&gt;RAM&lt;/th&gt;
+            &lt;th&gt;RTC&lt;/th&gt;
+        &lt;/tr&gt;
+    &lt;/thead&gt;
+    &lt;tbody&gt;
+        &lt;tr&gt;
+            &lt;td&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;None&lt;/code&gt;&lt;/td&gt;
+            &lt;td&gt;32Ko&lt;/td&gt;
+            &lt;td&gt;Non&lt;/td&gt;
+            &lt;td&gt;Non&lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+            &lt;td&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;MBC1&lt;/code&gt;&lt;/td&gt;
+            &lt;td&gt;2Mo&lt;/td&gt;
+            &lt;td&gt;32Ko&lt;/td&gt;
+            &lt;td&gt;Non&lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+            &lt;td&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;MBC2&lt;/code&gt;&lt;/td&gt;
+            &lt;td&gt;256Ko&lt;/td&gt;
+            &lt;td&gt;512x4 bits&lt;/td&gt;
+            &lt;td&gt;Non&lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+            &lt;td&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;MBC3&lt;/code&gt;&lt;/td&gt;
+            &lt;td&gt;2Mo&lt;/td&gt;
+            &lt;td&gt;32Ko&lt;/td&gt;
+            &lt;td&gt;Oui&lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+            &lt;td&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;MBC30&lt;/code&gt;&lt;/td&gt;
+            &lt;td&gt;4Mo&lt;/td&gt;
+            &lt;td&gt;64Ko&lt;/td&gt;
+            &lt;td&gt;Oui&lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+            &lt;td&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;MBC5&lt;/code&gt;&lt;/td&gt;
+            &lt;td&gt;8Mo&lt;/td&gt;
+            &lt;td&gt;128Ko&lt;/td&gt;
+            &lt;td&gt;Non&lt;/td&gt;
+        &lt;/tr&gt;
+    &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;Il existe d’autres types de &lt;code class=&quot;highlighter-rouge&quot;&gt;Mapper&lt;/code&gt; mais ils sont bien plus rares. Les &lt;code class=&quot;highlighter-rouge&quot;&gt;Mapper&lt;/code&gt; de type &lt;code class=&quot;highlighter-rouge&quot;&gt;HuC&lt;/code&gt; sont similaires aux &lt;code class=&quot;highlighter-rouge&quot;&gt;MBC&lt;/code&gt; de même numéro.&lt;br /&gt;
+&lt;em&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;MBC&lt;/code&gt; signifie &lt;strong&gt;M&lt;/strong&gt;emory &lt;strong&gt;B&lt;/strong&gt;ank &lt;strong&gt;C&lt;/strong&gt;ontroller&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;Qui peut le plus peut le moins, et heureusement puisqu’il semble impossible de trouver des mémoires &lt;code class=&quot;highlighter-rouge&quot;&gt;flash&lt;/code&gt; de plus de &lt;strong&gt;512Ko&lt;/strong&gt; en boitier &lt;code class=&quot;highlighter-rouge&quot;&gt;DIP&lt;/code&gt; ou &lt;code class=&quot;highlighter-rouge&quot;&gt;PLCC&lt;/code&gt; et fonctionnant sous une tension de &lt;strong&gt;5V&lt;/strong&gt; … (enfin, ça existe mais à 40$ pour 1Mo ça va pas le faire).&lt;/p&gt;
+
+&lt;p&gt;Personnellement j’ai des mémoires de &lt;strong&gt;512Ko&lt;/strong&gt;, je vais donc me limiter aux &lt;code class=&quot;highlighter-rouge&quot;&gt;Mapper&lt;/code&gt; 1, 3 et 5 (ce sont clairement les plus répandus ^^).&lt;/p&gt;
+
+&lt;p&gt;Pour dépasser les &lt;strong&gt;512Ko&lt;/strong&gt;, il faudrait donc passer sur des boitiers &lt;code class=&quot;highlighter-rouge&quot;&gt;TSOP&lt;/code&gt; ! Ce qui impliquerait de passer directement par la cartouche pour programmer la mémoire puisque les sockets &lt;code class=&quot;highlighter-rouge&quot;&gt;TSOP&lt;/code&gt; sont vraiment très volumineux et qu’il faudrait donc souder la mémoire flash dans la cartouche. Ca sera très certainement une évolution de ce projet, et donc un futur article :)&lt;br /&gt;
+Pour le moment, je vais me contenter d’un bon vieux socket &lt;code class=&quot;highlighter-rouge&quot;&gt;DIP32&lt;/code&gt; avec une mémoire flash &lt;code class=&quot;highlighter-rouge&quot;&gt;SST39SF040&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;Quoi qu’il en soit, l’objectif ici n’est pas de faire tourner tous les jeux GB existants, &lt;strong&gt;512Ko&lt;/strong&gt; ça sera largement suffisant pour tester mes propres programmes !&lt;/p&gt;
+
+&lt;h2 id=&quot;matérieloutilscomposants-requis-pour-faire-votre-cartouche-programmable&quot;&gt;Matériel/Outils/Composants requis pour faire votre cartouche programmable&lt;/h2&gt;
+
+&lt;p&gt;Pour commencer, il est préférable de vous procurer un tournevis (ou embout) &lt;strong&gt;3.8MM Security Bit&lt;/strong&gt; afin d’ouvrir les cartouches GB sans faire de dégâts et sans galérer.&lt;/p&gt;
+
+&lt;p&gt;Ensuite il vous faudra un bon &lt;strong&gt;fer à souder&lt;/strong&gt;.&lt;br /&gt;
+Personnellement j’ai un &lt;strong&gt;TS100&lt;/strong&gt; et je le recommande, il est vraiment top !&lt;br /&gt;
+Et évidemment l’étain qui va bien avec éventuellement un peu de flux pour simplifier les soudures (en réalité il faudrait parler de &lt;strong&gt;brasage&lt;/strong&gt; et non de &lt;strong&gt;soudure&lt;/strong&gt;, mais on va pas se prendre la tête avec ça).&lt;/p&gt;
+
+&lt;p&gt;Comme vu précédemment, il faut un socket &lt;code class=&quot;highlighter-rouge&quot;&gt;DIP32&lt;/code&gt; ! Pour être exact, il faut un socket &lt;code class=&quot;highlighter-rouge&quot;&gt;DIP32-Wide&lt;/code&gt; qui correspond bien à la largeur de la puce mémoire.&lt;br /&gt;
+En effet, on retrouve deux largeurs dans les boitiers &lt;code class=&quot;highlighter-rouge&quot;&gt;DIP&lt;/code&gt;, &lt;strong&gt;7.62mm&lt;/strong&gt; (0.3”) et &lt;strong&gt;15.24mm&lt;/strong&gt; (0.6”).&lt;br /&gt;
+Il faut donc sélectionner le bon socket, en l’occurrence &lt;strong&gt;15.24mm (Wide)&lt;/strong&gt;.&lt;br /&gt;
+&lt;em&gt;Ceci dit, à partir du &lt;code class=&quot;highlighter-rouge&quot;&gt;DIP32&lt;/code&gt; il semble assez rare de trouver du &lt;strong&gt;7.62mm&lt;/strong&gt;.&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;Pour insérer ce socket dans la cartouche GB vous avez en gros deux possibilités :&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;Utiliser un petit circuit imprimé coupé aux bonnes dimensions pour bien se caler dans la cartouche&lt;/li&gt;
+  &lt;li&gt;Laisser le socket en l’air et éventuellement tenter de le caler dans la cartouche&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;Dans les deux cas il faudra faire très attention à ne pas avoir de faux contact ou de court-circuit en positionnant le socket par dessus le circuit imprimé de la cartouche (vous pouvez utiliser par exemple un isolant comme du scotch d’électricien).&lt;/p&gt;
+
+&lt;p&gt;Personnellement j’ai ce qu’il faut pour faire un circuit imprimé à une face, c’est largement suffisant pour y souder le socket et faire les raccordements nécessaires.&lt;br /&gt;
+Donc j’ai choisi la solution 1.&lt;/p&gt;
+
+&lt;p&gt;Alors évidemment le &lt;code class=&quot;highlighter-rouge&quot;&gt;DIP32&lt;/code&gt; est bien trop épais pour rentrer incognito dans une cartouche GB …&lt;br /&gt;
+L’emplacement est donc vite vu puisqu’il peut rentrer qu’à un seul endroit, c’est à dire en haut de la cartouche en découpant la coque. Inutile de préciser qu’il faudra s’assurer que le placement soit assez haut pour permettre à la cartouche de s’insérer normalement dans la GB.&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;Dans une cartouche avec une pile (quasiment toutes celles qui ont de la &lt;code class=&quot;highlighter-rouge&quot;&gt;RAM&lt;/code&gt; et celles avec le &lt;code class=&quot;highlighter-rouge&quot;&gt;RTC&lt;/code&gt;), ça risque être un peu compliqué d’incruster le socket &lt;code class=&quot;highlighter-rouge&quot;&gt;DIP32&lt;/code&gt; … Il serait certainement plus simple de faire cela avec un socket &lt;code class=&quot;highlighter-rouge&quot;&gt;PLCC32&lt;/code&gt; (et une mémoire &lt;code class=&quot;highlighter-rouge&quot;&gt;29F040&lt;/code&gt;), ça prendrait beaucoup moins de place !&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;Et pour finir, le fil !&lt;br /&gt;
+Vu la taille des broches des boitiers &lt;code class=&quot;highlighter-rouge&quot;&gt;SOP&lt;/code&gt; et &lt;code class=&quot;highlighter-rouge&quot;&gt;SOIC&lt;/code&gt;, généralement moins de &lt;strong&gt;0.5mm&lt;/strong&gt;, il faut prévoir un fil assez fin pour arriver à faire un travail assez propre.&lt;br /&gt;
+J’ai pris le plus petit que j’avais dans mon stock, à savoir du &lt;code class=&quot;highlighter-rouge&quot;&gt;AWG30&lt;/code&gt; &lt;em&gt;(0.25mm²)&lt;/em&gt; et il s’avère que ce fil convient parfaitement pour ce projet !&lt;/p&gt;
+
+&lt;h2 id=&quot;remplacer-la-rom-dans-une-cartouche-gameboy&quot;&gt;Remplacer la ROM dans une cartouche GameBoy&lt;/h2&gt;
+
+&lt;p&gt;Nous y voilà ! Il est temps d’attaquer le chantier !&lt;/p&gt;
+
+&lt;p&gt;Pour ma première tentative, j’ai décidé de sacrifier un jeu vraiment nul afin d’avoir aucun regret en cas d’échec.&lt;br /&gt;
+&lt;em&gt;Spoiler : J’ai réussi du premier coup ^^&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;Mon cobaye est donc le jeu &lt;strong&gt;Taxi 2&lt;/strong&gt; &lt;em&gt;(CGB-BT2F-FRA)&lt;/em&gt; qui contient un &lt;strong&gt;mapper&lt;/strong&gt; &lt;code class=&quot;highlighter-rouge&quot;&gt;MBC5&lt;/code&gt; avec une &lt;strong&gt;ROM&lt;/strong&gt; &lt;code class=&quot;highlighter-rouge&quot;&gt;MX23C8005&lt;/code&gt; &lt;em&gt;(1Mo en boitier &lt;code class=&quot;highlighter-rouge&quot;&gt;SOP32&lt;/code&gt;)&lt;/em&gt;.&lt;br /&gt;
+Donc pas de &lt;strong&gt;RAM&lt;/strong&gt; ni de &lt;strong&gt;RTC&lt;/strong&gt;, mais ce n’est pas bien grave, le but étant surtout de tester la manipulation afin de confirmer que ça fonctionne pour maximiser les chances de réussite lors des mes prochaines tentatives avec des cartouches plus intéressantes.&lt;/p&gt;
+
+&lt;p&gt;La procédure est assez simple : dessouder la &lt;strong&gt;ROM&lt;/strong&gt; puis souder chaque fil de la &lt;strong&gt;mémoire flash&lt;/strong&gt; à l’emplacement correspondant pour chaque broche.&lt;/p&gt;
+
+&lt;p&gt;Si vous possédez une station à air chaud pour dessouder la &lt;strong&gt;ROM&lt;/strong&gt; tant mieux pour vous mais pensez bien à protéger les autres composants pour rien endommager (notamment la pile si vous en avez une).&lt;br /&gt;
+Personnellement je n’ai pas encore de station à air chaud, je vais donc dessouder avec mon fer à souder.&lt;br /&gt;
+C’est pas le plus pratique mais ça fonctionne bien en utilisant une petite aiguille à coudre pour soulever chaque patte une à une tant que l’étain est liquide.&lt;/p&gt;
+
+&lt;p&gt;Pour la correspondance des broches, il faut regarder le &lt;strong&gt;datasheet&lt;/strong&gt; de la &lt;strong&gt;ROM&lt;/strong&gt; (&lt;code class=&quot;highlighter-rouge&quot;&gt;MX23C8005&lt;/code&gt; dans mon cas), et comparer les placements avec votre &lt;strong&gt;mémoire flash&lt;/strong&gt;, dans mon cas c’est une &lt;code class=&quot;highlighter-rouge&quot;&gt;39SF040&lt;/code&gt; :&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/images/23c8000-vs-39sf040.jpg&quot; alt=&quot;Compare MX23C8000 vs SST39SF040&quot; title=&quot;Compare MX23C8000 vs SST39SF040&quot; class=&quot;center&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;On constate 3 choses :&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;A18&lt;/code&gt; a changé de place&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;A19&lt;/code&gt; n’est pas présent sur la mémoire flash &lt;code class=&quot;highlighter-rouge&quot;&gt;39SF040&lt;/code&gt;&lt;/li&gt;
+  &lt;li&gt;La broche &lt;code class=&quot;highlighter-rouge&quot;&gt;WE#&lt;/code&gt; est présente uniquement sur la mémoire flash, ce qui s’explique facilement puisqu’il s’agit de la broche &lt;code class=&quot;highlighter-rouge&quot;&gt;Write Enable&lt;/code&gt; qui permet de gérer l’écriture (et pour rappel, la &lt;strong&gt;ROM&lt;/strong&gt; ne permet pas l’écriture)&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;Pour &lt;code class=&quot;highlighter-rouge&quot;&gt;A18&lt;/code&gt; il suffit de souder le fil à l’emplacement correspondant.&lt;br /&gt;
+Pour &lt;code class=&quot;highlighter-rouge&quot;&gt;A19&lt;/code&gt; inutile de le raccorder puisque ma mémoire flash fait seulement &lt;strong&gt;512Ko&lt;/strong&gt; et n’a donc pas besoin de ce 20ème bit d’adresse.&lt;br /&gt;
+Et enfin pour &lt;code class=&quot;highlighter-rouge&quot;&gt;WE#&lt;/code&gt;, cette broche doit être à l’état haut pour le cycle de lecture (afin de se comporter comme la &lt;strong&gt;ROM&lt;/strong&gt;), et vu que je prévois d’extraire la puce pour la programmer en dehors de la cartouche, j’ai décidé de relier cette broche directement à &lt;code class=&quot;highlighter-rouge&quot;&gt;VCC&lt;/code&gt; pour le moment.&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;Je l’ai pas indiqué avant mais Furrtek a déjà fait un article à ce sujet : &lt;a href=&quot;http://furrtek.free.fr/?a=mbc1flash&quot; target=&quot;_blank&quot;&gt;Furrtek Cartouche Flash MBC1&lt;/a&gt;&lt;/em&gt;&lt;br /&gt;
+&lt;em&gt;Cependant, il est incomplet et il contient au moins une erreur.&lt;/em&gt;&lt;br /&gt;
+&lt;em&gt;En effet, d’après lui il faut relier &lt;code class=&quot;highlighter-rouge&quot;&gt;WE#&lt;/code&gt; à la broche &lt;strong&gt;31&lt;/strong&gt; du connecteur de cartouche pour permettre la programmation. Alors oui ça lui permettra de faire la programmation, mais en fonctionnement normal ce n’est pas bon puisque cette broche &lt;strong&gt;31&lt;/strong&gt; correspond à &lt;code class=&quot;highlighter-rouge&quot;&gt;VIN&lt;/code&gt; et que d’après mes mesures elle fournit rien, donc pas d’état haut ni d’état bas.&lt;/em&gt;&lt;br /&gt;
+&lt;em&gt;Donc en fonctionnement normal, &lt;code class=&quot;highlighter-rouge&quot;&gt;WE#&lt;/code&gt; serait simplement à l’air et donc dans un état incertain, ce qui n’est pas bon !&lt;/em&gt;&lt;br /&gt;
+&lt;em&gt;(Une possibilité serait de mettre une résistance de pull-up, mais il y a aussi une autre solution que je dois encore tester mais qui devrait être bien plus propre, j’en parlerai dans un prochain article)&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;Voici donc le résultat :&lt;/p&gt;
+
+&lt;div class=&quot;gallery center&quot;&gt;
+    &lt;img src=&quot;/assets/images/replace-gb-cartridge-rom-step-1.jpg&quot; alt=&quot;1. PCB Cartouche Taxi 2&quot; title=&quot;1. PCB Cartouche Taxi 2&quot; class=&quot;lightbox&quot; /&gt;
+    &lt;img src=&quot;/assets/images/replace-gb-cartridge-rom-step-2.jpg&quot; alt=&quot;2. PCB Cartouche sans ROM&quot; title=&quot;2. PCB Cartouche sans ROM&quot; class=&quot;lightbox&quot; /&gt;
+    &lt;img src=&quot;/assets/images/replace-gb-cartridge-rom-step-3.jpg&quot; alt=&quot;3. Isolation du PCB du socket DIP32&quot; title=&quot;3. Isolation du PCB du socket DIP32&quot; class=&quot;lightbox&quot; /&gt;
+    &lt;img src=&quot;/assets/images/replace-gb-cartridge-rom-step-4.jpg&quot; alt=&quot;4. Mise en place dans la cartouche&quot; title=&quot;4. Mise en place dans la cartouche&quot; class=&quot;lightbox&quot; /&gt;
+    &lt;img src=&quot;/assets/images/replace-gb-cartridge-rom-step-5.jpg&quot; alt=&quot;5. Rendu final&quot; title=&quot;5. Rendu final&quot; class=&quot;lightbox&quot; /&gt;
+&lt;/div&gt;
+
+&lt;p&gt;J’avoue c’est pas très propre !! Faut dire que c’est surtout pour faire un prototype et confirmer que ça fonctionne.&lt;/p&gt;
+
+&lt;p&gt;N’oubliez pas d’isoler toutes les parties qui risqueraient de provoquer un court-circuit.&lt;br /&gt;
+Sur la 3ème photo vous pouvez voir que j’ai utilisé du scotch d’électricien noir. J’ai fait en sorte que les soudures ne soient pas pointues afin de ne pas risquer qu’elles traversent le scotch !&lt;/p&gt;
+
+&lt;h2 id=&quot;programmation-de-la-mémoire-et-limitations-à-lexécution&quot;&gt;Programmation de la mémoire et limitations à l’exécution&lt;/h2&gt;
+
+&lt;p&gt;Comme indiqué plus haut dans l’article, pour le moment, je prévois d’extraire la puce de son socket pour la programmer avec mon &lt;a href=&quot;programmateur-eeprom-diy-arduino&quot; target=&quot;_blank&quot;&gt;programmateur fait maison&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Concernant les limitations, tout va dépendre de votre &lt;code class=&quot;highlighter-rouge&quot;&gt;Mapper&lt;/code&gt; et des composants présents sur votre cartouche.&lt;/p&gt;
+
+&lt;p&gt;Par exemple, si votre cartouche possède un &lt;code class=&quot;highlighter-rouge&quot;&gt;MBC5&lt;/code&gt; sans &lt;code class=&quot;highlighter-rouge&quot;&gt;RAM&lt;/code&gt; (comme ma cartouche de test), vous pourrez très bien faire tourner des programmes initialement prévus pour un autre &lt;code class=&quot;highlighter-rouge&quot;&gt;MBC&lt;/code&gt; tant que ce programme ne nécessite pas de &lt;code class=&quot;highlighter-rouge&quot;&gt;RAM&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;Si vous avez de la &lt;code class=&quot;highlighter-rouge&quot;&gt;RAM&lt;/code&gt;, vous pourrez aussi faire tourner des programmes qui n’utilisent pas la &lt;code class=&quot;highlighter-rouge&quot;&gt;RAM&lt;/code&gt; mais vous pourrez évidemment faire tourner ceux qui en ont besoin, à partir du moment où vous avez une quantité de &lt;code class=&quot;highlighter-rouge&quot;&gt;RAM&lt;/code&gt; suffisante.&lt;br /&gt;
+C’est évidemment valable aussi pour le &lt;code class=&quot;highlighter-rouge&quot;&gt;RTC&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;Qui peut le plus peut le moins, mais l’inverse n’est pas possible, ne demandez pas à votre cartouche de faire quelque chose qu’elle est incapable de faire.&lt;/p&gt;
+
+&lt;h2 id=&quot;conclusion&quot;&gt;Conclusion&lt;/h2&gt;
+
+&lt;p&gt;Même si cette solution n’est pas parfaite, elle reste très abordable, intéressante et surtout satisfaisante à réaliser !&lt;/p&gt;
+
+&lt;p&gt;Pour réaliser ce projet j’ai commandé &lt;strong&gt;2 mémoires&lt;/strong&gt; &lt;code class=&quot;highlighter-rouge&quot;&gt;39SF040&lt;/code&gt; et &lt;strong&gt;10 sockets&lt;/strong&gt; &lt;code class=&quot;highlighter-rouge&quot;&gt;DIP32&lt;/code&gt; pour un total de &lt;strong&gt;4.23€&lt;/strong&gt; frais de port compris sur &lt;strong&gt;aliexpress&lt;/strong&gt;.&lt;br /&gt;
+&lt;em&gt;Les prix varient pas mal dans le temps mais ça vaut vraiment le coup ^^, il faut juste être patient car il faut généralement 1 mois pour la livraison.&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;Nul doute qu’il y aura une suite à cet article afin de présenter une évolution :)&lt;br /&gt;
+Cependant, l’évolution nécessitera un peu plus de composants, rien que pour permettre de programmer la mémoire directement depuis la cartouche …&lt;/p&gt;
+
+&lt;p&gt;En attendant amusez vous bien et renseignez vous sur les prix des cartouches avant de les sacrifier, par exemple les jeux Pokémon coutent vraiment chères, ça serait dommage de les bousiller.&lt;/p&gt;
+
+&lt;h2 id=&quot;sources-et-inspirations&quot;&gt;Sources et inspirations&lt;/h2&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;programmateur-eeprom-diy-arduino&quot; target=&quot;_blank&quot;&gt;Programmer une mémoire Flash (EEPROM) 32 broches avec un Arduino&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://gb.flob.ovh/&quot; target=&quot;_blank&quot;&gt;Game Boy Cartridges&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://www.alldatasheet.com/&quot; target=&quot;_blank&quot;&gt;AllDataSheet&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;http://furrtek.free.fr/?a=mbc1flash&quot; target=&quot;_blank&quot;&gt;Furrtek Cartouche Flash MBC1&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+        <pubDate>Mon, 03 Aug 2020 12:03:32 +0200</pubDate>
+        <link>https://elrindel.github.io/fabrication-cartouche-gameboy-programmable-pas-chere</link>
+        <guid isPermaLink="true">https://elrindel.github.io/fabrication-cartouche-gameboy-programmable-pas-chere</guid>
+        
+        
+        <category>gameboy</category>
+        
+        <category>DIY</category>
+        
+      </item>
     
       <item>
         <title>Programmer une mémoire Flash (EEPROM) 32 broches avec un Arduino</title>
