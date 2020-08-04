@@ -5,8 +5,8 @@
     <description>Mes projets</description>
     <link>https://elrindel.github.io/</link>
     <atom:link href="https://elrindel.github.io/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Mon, 03 Aug 2020 21:02:43 +0200</pubDate>
-    <lastBuildDate>Mon, 03 Aug 2020 21:02:43 +0200</lastBuildDate>
+    <pubDate>Tue, 04 Aug 2020 11:02:03 +0200</pubDate>
+    <lastBuildDate>Tue, 04 Aug 2020 11:02:03 +0200</lastBuildDate>
     <generator>Jekyll v4.0.0</generator>
     
       <item>
@@ -46,7 +46,7 @@ De plus, on trouve des mémoires &lt;code class=&quot;highlighter-rouge&quot;&gt
 
 &lt;p&gt;Vous l’aurez compris, on va donc remplacer la &lt;code class=&quot;highlighter-rouge&quot;&gt;ROM&lt;/code&gt; par une mémoire &lt;code class=&quot;highlighter-rouge&quot;&gt;flash&lt;/code&gt; !&lt;/p&gt;
 
-&lt;p&gt;Pour le moment je vais faire en sorte de pouvoir extraire facilement la mémoire afin de la programmer avec mon &lt;a href=&quot;programmateur-eeprom-diy-arduino&quot; target=&quot;_blank&quot;&gt;programmer fait maison à base d’Arduino&lt;/a&gt;.&lt;br /&gt;
+&lt;p&gt;Pour le moment je vais faire en sorte de pouvoir extraire facilement la mémoire afin de la programmer avec mon &lt;a href=&quot;programmateur-eeprom-diy-arduino&quot; target=&quot;_blank&quot;&gt;programmateur fait maison à base d’Arduino&lt;/a&gt;.&lt;br /&gt;
 J’ai donc choisi de me limiter aux boitiers &lt;code class=&quot;highlighter-rouge&quot;&gt;DIP&lt;/code&gt; et &lt;code class=&quot;highlighter-rouge&quot;&gt;PLCC&lt;/code&gt; qui ont le défaut d’être assez volumineux (surtout le &lt;code class=&quot;highlighter-rouge&quot;&gt;DIP&lt;/code&gt;) mais l’avantage d’être facilement manipulables en utilisant un &lt;strong&gt;socket&lt;/strong&gt; adapté.&lt;/p&gt;
 
 &lt;h2 id=&quot;choisir-la-bonne-cartouche-pour-remplacer-sa-mémoire-rom&quot;&gt;Choisir la bonne cartouche pour remplacer sa mémoire ROM&lt;/h2&gt;
@@ -211,8 +211,9 @@ Et enfin pour &lt;code class=&quot;highlighter-rouge&quot;&gt;WE#&lt;/code&gt;, 
 
 &lt;p&gt;&lt;em&gt;Je l’ai pas indiqué avant mais Furrtek a déjà fait un article à ce sujet : &lt;a href=&quot;http://furrtek.free.fr/?a=mbc1flash&quot; target=&quot;_blank&quot;&gt;Furrtek Cartouche Flash MBC1&lt;/a&gt;&lt;/em&gt;&lt;br /&gt;
 &lt;em&gt;Cependant, il est incomplet et il contient au moins une erreur.&lt;/em&gt;&lt;br /&gt;
-&lt;em&gt;En effet, d’après lui il faut relier &lt;code class=&quot;highlighter-rouge&quot;&gt;WE#&lt;/code&gt; à la broche &lt;strong&gt;31&lt;/strong&gt; du connecteur de cartouche pour permettre la programmation. Alors oui ça lui permettra de faire la programmation, mais en fonctionnement normal ce n’est pas bon puisque cette broche &lt;strong&gt;31&lt;/strong&gt; correspond à &lt;code class=&quot;highlighter-rouge&quot;&gt;VIN&lt;/code&gt; et que d’après mes mesures elle fournit rien, donc pas d’état haut ni d’état bas.&lt;/em&gt;&lt;br /&gt;
-&lt;em&gt;Donc en fonctionnement normal, &lt;code class=&quot;highlighter-rouge&quot;&gt;WE#&lt;/code&gt; serait simplement à l’air et donc dans un état incertain, ce qui n’est pas bon !&lt;/em&gt;&lt;br /&gt;
+&lt;em&gt;En effet, d’après lui il faut relier &lt;code class=&quot;highlighter-rouge&quot;&gt;WE#&lt;/code&gt; à la broche &lt;strong&gt;31&lt;/strong&gt; du connecteur de cartouche pour permettre la programmation. Alors oui ça lui permettra de faire la programmation, mais en fonctionnement normal ce n’est pas bon puisque cette broche &lt;strong&gt;31&lt;/strong&gt; correspond à &lt;code class=&quot;highlighter-rouge&quot;&gt;VIN&lt;/code&gt; et qu’elle fournit rien de concluant, donc pas d’état haut ni d’état bas.&lt;/em&gt;&lt;br /&gt;
+&lt;em&gt;Enfin si, il y a une tension de &lt;strong&gt;1.2V&lt;/strong&gt; qui varie au rythme de la musique, j’ai pas essayé mais il est possible que ce soit un signal audio, dans le meilleur des cas ça serait interprété comme un état bas …&lt;/em&gt;&lt;br /&gt;
+&lt;em&gt;Donc en fonctionnement normal, &lt;code class=&quot;highlighter-rouge&quot;&gt;WE#&lt;/code&gt; serait dans un état incertain (probablement bas), ce qui n’est pas bon !&lt;/em&gt;&lt;br /&gt;
 &lt;em&gt;(Une possibilité serait de mettre une résistance de pull-up, mais il y a aussi une autre solution que je dois encore tester mais qui devrait être bien plus propre, j’en parlerai dans un prochain article)&lt;/em&gt;&lt;/p&gt;
 
 &lt;p&gt;Voici donc le résultat :&lt;/p&gt;
