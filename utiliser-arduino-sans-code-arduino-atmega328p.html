@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Vous avez probablement déjà entendu parler d’Arduino, au moins en tant que carte électronique programmable pour bidouilleur (d’ailleurs j’en ai utilisé dans ...">
+<link type="application/atom+xml" rel="alternate" href="https://elrindel.github.io/feed.xml" title="Elrindel/Flob Blog" />
+<!-- Begin Jekyll SEO tag v2.6.1 -->
+<title>Utiliser un Arduino sans code Arduino : ATmega328P | Elrindel/Flob Blog</title>
+<meta name="generator" content="Jekyll v4.0.0" />
+<meta property="og:title" content="Utiliser un Arduino sans code Arduino : ATmega328P" />
+<meta property="og:locale" content="fr_FR" />
+<meta name="description" content="Vous avez probablement déjà entendu parler d’Arduino, au moins en tant que carte électronique programmable pour bidouilleur (d’ailleurs j’en ai utilisé dans mes précédents articles). Si vous connaissez déjà ces cartes c’est bien, si vous avez déjà testé un petit programme Arduino c’est mieux !! En effet, cet article n’a pas pour objectif de vous présenter ni de vous initier à l’Arduino, mais plutôt d’explorer différentes façons d’écrire du code et voir quels sont les avantages et inconvénients de l’environnement Arduino, et surtout comment créer des programmes Arduino sans code Arduino. Introduction Arduino ce n’est pas seulement des cartes électroniques programmables, c’est aussi un IDE et surtout un framework, le tout open-source ! Ce framework est sujet à débat … certains lui reprochent de trop simplifier la programmation des µC (microcontrôleurs), ce qui rend le programme plus lourd (en terme de mémoire et d’exécution), pas optimisé et “limite certaines possibilités”. Enfin, ce sont les principaux arguments qu’on retrouve contre ce framework, mais nous allons voir que malgré ces points négatifs, il y a aussi du positif et ce n’est pas négligeable ! Concernant l’IDE Arduino, tout le monde semble plus ou moins d’accord sur le fait que cet environnement de développement est totalement dépassé ! C’est un véritable calvaire de coder dans cet IDE, même si c’est toujours mieux que le vieux notepad natif de Windows … (ouai bon, j’exagère un peu, c’est pas bien compliqué de faire mieux que ce vieux notepad ^^). A l’heure actuelle, ils travaillent sur une nouvelle version de l’IDE Arduino (version 2.0 dispo en beta). Même si elle semble bien mieux que la première version, il semblerait qu’elle ne soit pas encore prête à remplacer un véritable IDE. C’est quoi un microcontrôleur ? Si vous n’êtes pas déjà familier avec les cartes électroniques programmables, il est possible que vous ne saisissiez pas bien ce qu’est un µC (microcontrôleurs). Sans rentrer dans les détails, un µC est une puce électronique qui contient tous les éléments (ou presque) nécessaires à l’exécution d’un code et à la manipulation d’entrées/sorties et/ou l’utilisation de certains périphériques (DAC/ADC, liaison série, timer etc…). Chaque modèle de carte électronique programmable est basé sur un modèle de µC (dans certains cas, suivant la version d’une carte on peut trouver un µC légèrement différents). Par exemple, le très célèbre Arduino UNO utilise le non moins célèbre µC ATmega328 (tout comme l’Arduino Nano, mais ce dernier existe aussi avec un ATmega168). Ces cartes contiennent généralement assez peu de composants. Une grande partie des µC ont uniquement besoin d’une alimentation pour fonctionner. D’autres vont également avoir besoin d’un oscillateur externe, voir même d’une mémoire externe (ou plusieurs), puis suivant les périphériques présents dans le µC on peut avoir besoin d’autres composants comme une antenne par exemple … Le rôle principal de ce genre de carte est donc de faciliter les connexions, ce sont des cartes de développement qui permettent de réaliser des tests facilement et rapidement, notamment en intégrant (généralement) une interface USB pour programmer facilement le µC (la partie USB est gérée soit par une puce dédiée sur la carte, soit par le µC directement si il est compatible avec cette fonctionnalité). Mais on pourrait très bien utiliser le µC en dehors de sa carte en lui apportant le minimum de composants requis pour qu’il fonctionne (donc pas grand chose). Concept de l’IDE Arduino Malgré ses défauts, cet environnement de développement Arduino a l’avantage de simplifier énormément la compilation et le transfert des programmes pour toutes les cartes compatibles Arduino grâce à un gestionnaire de librairies très facile à utiliser ainsi qu’un gestionnaire de cartes qui permet d’ajouter de nouvelles cartes et/ou de nouvelles options pour certaines cartes. En quelques cliques on peut donc compiler et téléverser (hmm, alors, cette traduction est aussi sujet à débat, mais c’est la traduction officielle …) le programme sur une carte gérée par l’IDE. Heureusement, vous pouvez éditer votre code dans votre éditeur favori puis utiliser l’IDE Arduino uniquement pour la compilation et la programmation de votre carte. Il existe évidemment d’autres alternatives pour ne pas utiliser l’IDE Arduino, comme PlatformIO, mais je ne vais pas traiter ce sujet ici. Dans cet article nous verrons comment nous passer du framework et de l’IDE Arduino en utilisant directement les outils AVR (voir dans les prochains chapitres) ! Concept du framework Arduino Le framework Arduino a pour objectif de rendre facilement accessible la programmation d’un certain nombre de µC, mais aussi de rendre compatible le code pour une grande partie des µC compatibles Arduino. En effet, chaque modèle de µC a ses propres caractéristiques/spécificités, notamment au niveau de la répartition des GPIO et des adresses mémoire à utiliser pour atteindre ces GPIO ainsi que les différents périphériques du µC. En utilisant le framework, inutile d’aller lire la documentation du µC pour savoir quelle adresse mémoire (ou registre) utiliser etc…, c’est le framework qui gère tout ça pour nous ! Cela permet donc d’avoir un code identique pour une grande partie des µC compatibles Arduino. Ce qui est un sacré avantage pour l’apprentissage et pour le partage ! Evidemment, si vous partagez un code qui utilise 50 GPIO d’un Arduino Mega … vous ne pourrez pas l’utiliser directement sur un Arduino UNO (qui possède seulement 20 GPIO). Le framework n’est pas magique, il ne va pas créer ce qui n’existe pas … (pour certaines fonctionnalités ou certains périphériques il peut proposer une solution software quand c’est possible). Comparaison d’un code Arduino avec et sans framework J’ai hésité à faire des benchmark pour comparer les performances d’un “même” code avec et sans framework mais ça impliquerait de rentrer beaucoup plus dans les détails de tout un tas de fonctionnalités et ça ferait un article interminable … (peut-être pour un prochain article) Donc pour simplifier la comparaison, je me suis limité à comparer la taille des binaires (la quantité de mémoire flash utilisée pour stocker le programme dans le µC). Quand on parle de programme de test sur un Arduino, le plus populaire est sans conteste le Blink qui permet tout simplement de faire clignoter une LED à intervalle régulier. Généralement, les cartes Arduino ont une LED intégrée sur la carte, ce qui permet de tester directement sans aucun branchement autre que l’alimentation. On va voir ci-dessous différentes façons de réaliser ce Blink. J’utilise un Arduino UNO pour ce programme de test ! C’est donc un µC ATmega328 (processeur AVR, donc utilisation de la lib et des outils AVR). 1 - Code Arduino, Compilateur IDE Arduino Le code Blink officiel : void setup() { pinMode(LED_BUILTIN, OUTPUT); } void loop() { digitalWrite(LED_BUILTIN, HIGH); delay(1000); digitalWrite(LED_BUILTIN, LOW); delay(1000); } Mémoire utilisée : 924 octets Compatibilité : Toutes les cartes compatibles Arduino Certaines cartes n’ont pas de LED intégrée, auquel cas il faut l’ajouter pour le test. 2 - Code Arduino optimisé 1, Compilateur IDE Arduino Première optimisation en remplaçant delay du framework Arduino par _delay_ms de la lib AVR : void setup() { pinMode(LED_BUILTIN, OUTPUT); } void loop() { digitalWrite(LED_BUILTIN, HIGH); _delay_ms(1000); digitalWrite(LED_BUILTIN, LOW); _delay_ms(1000); } Mémoire utilisée : 770 octets Compatibilité : Cartes Arduino basées sur un µC AVR Et éventuellement d’autres si la fonction _delay_ms existe dans la lib du µC en question. 154 octets de gagnés juste en utilisant une autre fonction de délais, mais au détriment d’une compatibilité limitée aux µC AVR. 3 - Code Arduino optimisé 2, Compilateur IDE Arduino Seconde optimisation en utilisant directement les registres pour configurer et manipuler le GPIO LED_BUILTIN (qui correspond à la GPIO 13) : void setup(){ DDRB = 0b00100000; } void loop(){ PORTB |= 0b00100000; _delay_ms(1000); PORTB &amp;= 0b11011111; _delay_ms(1000); } Mémoire utilisée : 488 octets Compatibilité : Cartes Arduino basées sur un µC AVR et dont le bit 5 du registre B correspond bien au bon GPIO Parmi les cartes Arduino officielles les plus connues, les suivantes son compatibles : Duemilanove, Mini, Nano, Pro Mini, Uno Pour déterminer le registre et le bit à utiliser, soit il faut lire le datasheet du µC, soit il faut regarder le pinout de la carte et/ou celui du µC (pinout arduino uno dans une recherche d’images). Dans le cas présent, on constate que le GPIO 13 est sur le port PB5, ce qui correspond au port/registre B et au bit 5. L’utilisation des registres permet, dans le cas présent, d’économiser 282 octets ! Cependant, les registres dépendent des µC … comme évoqué précédemment, d’un modèle de µC à un autre, les GPIO et autres périphériques sont généralement attribués à des adresses/registres/ports différents. Mais il y a au moins deux gros avantages à utiliser les registres : Au niveau des performances c’est le top, on ne pourra pas faire mieux (et comparé aux fonctions du framework c’est un gain énorme en performance) On peut manipuler plusieurs GPIO d’un coup ! Dans le cas présent on peut manipuler 8 GPIO d’un coup (sur un ESP32 on peut manipuler 32 GPIO d’un coup) 4 - Code avec lib AVR uniquement, Compilateur IDE Arduino __attribute__((weak)) int main(){ DDRB = 0b00100000; for(;;){ PORTB |= 0b00100000; _delay_ms(1000); PORTB &amp;= 0b11011111; _delay_ms(1000); } return 0; } Mémoire utilisée : 178 octets Compatibilité : Même compatibilité que le code précédent Les fonctions setup et loop font partie du framework Arduino, mais derrière ces deux fonction il y a un main ! En réécrivant la fonction main on gagne 310 octets ! Cet écart est principalement lié à l’appel de la fonction init qui est exécuté au début du main du framework. Cette fonction init permet d’activer les interruptions et de paramétrer les registres des timers et de l’ADC. Pour notre Blink on peut s’en passer, mais si le programme a besoin d’utiliser certaines de ces fonctionnalités alors il faudra s’assurer qu’ils sont bien paramétrés. 5 - Code avec lib AVR uniquement, Compilateur avr-gcc #define F_CPU 16000000UL #include &lt;avr/io.h&gt; #include &lt;util/delay.h&gt; int main(){ DDRB = 0b00100000; for(;;){ PORTB |= 0b00100000; _delay_ms(1000); PORTB &amp;= 0b11011111; _delay_ms(1000); } return 0; } Mémoire utilisée : 178 octets Compatibilité : Même compatibilité que le code précédent MAIS il faut indiquer la fréquence de fonctionnement du µC ! Dans le cas présent, le fait de définir une mauvaise fréquence ne devrait pas bloquer le programme, mais la fonction _delay_ms ne sera pas cohérente. Exactement le même poids qu’avec le code précédent, et c’est parfaitement normal puisqu’il s’agit du même code mais avec les instructions nécessaires à la compilation en dehors de l’IDE Arduino. 6 - Code sans framework et sans lib, Compilateur avr-gcc typedef unsigned char uint8_t; typedef unsigned int uint16_t; typedef unsigned long int uint32_t; #define F_CPU 16000000UL #define DDRB (*(volatile uint8_t *)(0x24)) #define PORTB (*(volatile uint8_t *)(0x25)) void _delay_loop_2(uint16_t __count){ __asm__ volatile ( &quot;1: sbiw %0,1&quot; &quot;\n\t&quot; &quot;brne 1b&quot; : &quot;=w&quot; (__count) : &quot;0&quot; (__count) ); } void _delay_ms(double __ms){ double __tmp; uint16_t __ticks; __tmp = ((F_CPU) / 4e3) * __ms; if (__tmp &lt; 1.0) __ticks = 1; else if (__tmp &gt; 65535) { __ticks = (uint16_t) (__ms * 10.0); while(__ticks) { _delay_loop_2(((F_CPU) / 4e3) / 10); __ticks--; } return; } else __ticks = (uint16_t)__tmp; _delay_loop_2(__ticks); } int main(){ DDRB = 0b00100000; for(;;){ PORTB |= 0b00100000; _delay_ms(1000); PORTB &amp;= 0b11011111; _delay_ms(1000); } return 0; } Mémoire utilisée : 174 octets Compatibilité : Même compatibilité que le code précédent J’ai simplement copié une partie de la fonction de la lib AVR pour gérer le délais. Il y a aucun intérêt à faire ça mais c’était pour montrer cette possibilité. Vous en conviendrez, le gain de 4 octets ne justifie clairement pas de faire ce genre de code. Récapitulatif Lib Compilateur Mémoire (octets) Compatibilité Code 1 Arduino IDE Arduino 924 Arduino Code 2 Arduino + AVR IDE Arduino 770 µC AVR Code 3 Arduino + AVR IDE Arduino 488 µC AVR avec les mêmes registres Code 4 AVR IDE Arduino 178 µC AVR avec les mêmes registres Code 5 AVR avr-gcc 178 µC AVR avec les mêmes registres Code 6 - avr-gcc 174 µC AVR avec les mêmes registres Dès qu’on utilise des éléments de la lib AVR on se retrouve limité aux µC AVR, et dès qu’on utilise des éléments spécifiques à un µC (comme les registres) on restreint encore plus la compatibilité du code. L’IDE Arduino utilise également avr-gcc pour les cartes basées sur un µC AVR, mais il va automatiquement inclure son framework ainsi qu’une grande partie de la lib AVR. C’est pour cela que les codes compilés dans l’IDE Arduino n’ont pas besoin d’include pour utiliser les fonctionnalités du framework et une grande partie des fonctionnalités de la lib AVR. Pour compiler avec avr-gcc j’ai utilisé exactement les mêmes options que l’IDE Arduino (sans forcément chercher à quoi elles servent), le but n’étant pas de voir si les options de compilation sont réellement optimales mais plutôt de comparer le résultat final avec les même options compilation. Voici les commandes pour compiler et récupérer le binaire : avr-gcc -Wall -Wextra -Os -g -flto -fuse-linker-plugin -Wl,--gc-sections -mmcu=atmega328p blink.c -o blink.elf avr-objcopy -O binary blink.elf blink.bin Et la commande pour programmer votre Arduino : avrdude -c arduino -p m328p -P COMX -b 115200 -U flash:w:blink.bin Evidemment il faut remplacer COMX (/dev/ttySX sous linux) par le bon port série. Si votre Arduino possède un ancien bootloader, vous devrez passer en baudrate 57600 (-b 57600) au lieu de 115200. Au besoin, adaptez également l’option -p pour correspondre à votre µC (pour obtenir la liste, tapez cette commande : avrdude -c avrisp). Conclusion La différence de poids peut sembler énorme, et elle l’est pour un simple Blink ! Mais sur un programme bien plus gros, la différence de poids serait beaucoup moins impressionnante. Certes on gagnera toujours de l’espace en limitant l’utilisation des fonctions Arduino, mais toujours au détriment de la compatibilité entre les différents µC. Et comme évoqué précédemment, il y a aussi les performances qui rentrent en jeu ! L’utilisation des registres permet vraiment un gros gain, autant en poids qu’en performance. Suivant les contraintes de votre projet vous n’aurez peut-être pas le choix, si vous avez besoin d’optimiser au maximum les performances, et éventuellement la mémoire nécessaire, alors il faudra abandonner le framework Arduino et donc abandonner la compatibilité Arduino. Quoi qu’il en soit, pour débuter avec les µC, le framework Arduino est vraiment très bien conçu ! Pour partager son projet avec un maximum de personnes et surtout permettre de réutiliser votre code facilement, il est également très intéressant d’utiliser ce framework. C’est donc des choix à faire … ça va dépendre de votre projet, de votre cible et de vos préférences. Evidemment, il existe aussi des µC qui ne sont pas compatibles Arduino, il y a un choix énorme dans ce domaine. Si c’est pour une utilisation pro, je pense que vous ne devriez même pas vous demander si il faut utiliser ou non le framework Arduino … Pour moi l’utilisation d’Arduino est essentiellement pour l’apprentissage, le partage et le bidouillage ! Donc pour terminer, j’estime qu’il est inacceptable de cracher sur le framework Arduino (malgré ses points négatifs), et je pense que ceux qui le font n’ont pas la bonne approche. Grâce à Arduino, l’électronique et la programmation embarquée se démocratisent de plus en plus et sont désormais très abordables pour tout le monde ! Sources et inspirations Arduino AVR Toolchain" />
+<meta property="og:description" content="Vous avez probablement déjà entendu parler d’Arduino, au moins en tant que carte électronique programmable pour bidouilleur (d’ailleurs j’en ai utilisé dans mes précédents articles). Si vous connaissez déjà ces cartes c’est bien, si vous avez déjà testé un petit programme Arduino c’est mieux !! En effet, cet article n’a pas pour objectif de vous présenter ni de vous initier à l’Arduino, mais plutôt d’explorer différentes façons d’écrire du code et voir quels sont les avantages et inconvénients de l’environnement Arduino, et surtout comment créer des programmes Arduino sans code Arduino. Introduction Arduino ce n’est pas seulement des cartes électroniques programmables, c’est aussi un IDE et surtout un framework, le tout open-source ! Ce framework est sujet à débat … certains lui reprochent de trop simplifier la programmation des µC (microcontrôleurs), ce qui rend le programme plus lourd (en terme de mémoire et d’exécution), pas optimisé et “limite certaines possibilités”. Enfin, ce sont les principaux arguments qu’on retrouve contre ce framework, mais nous allons voir que malgré ces points négatifs, il y a aussi du positif et ce n’est pas négligeable ! Concernant l’IDE Arduino, tout le monde semble plus ou moins d’accord sur le fait que cet environnement de développement est totalement dépassé ! C’est un véritable calvaire de coder dans cet IDE, même si c’est toujours mieux que le vieux notepad natif de Windows … (ouai bon, j’exagère un peu, c’est pas bien compliqué de faire mieux que ce vieux notepad ^^). A l’heure actuelle, ils travaillent sur une nouvelle version de l’IDE Arduino (version 2.0 dispo en beta). Même si elle semble bien mieux que la première version, il semblerait qu’elle ne soit pas encore prête à remplacer un véritable IDE. C’est quoi un microcontrôleur ? Si vous n’êtes pas déjà familier avec les cartes électroniques programmables, il est possible que vous ne saisissiez pas bien ce qu’est un µC (microcontrôleurs). Sans rentrer dans les détails, un µC est une puce électronique qui contient tous les éléments (ou presque) nécessaires à l’exécution d’un code et à la manipulation d’entrées/sorties et/ou l’utilisation de certains périphériques (DAC/ADC, liaison série, timer etc…). Chaque modèle de carte électronique programmable est basé sur un modèle de µC (dans certains cas, suivant la version d’une carte on peut trouver un µC légèrement différents). Par exemple, le très célèbre Arduino UNO utilise le non moins célèbre µC ATmega328 (tout comme l’Arduino Nano, mais ce dernier existe aussi avec un ATmega168). Ces cartes contiennent généralement assez peu de composants. Une grande partie des µC ont uniquement besoin d’une alimentation pour fonctionner. D’autres vont également avoir besoin d’un oscillateur externe, voir même d’une mémoire externe (ou plusieurs), puis suivant les périphériques présents dans le µC on peut avoir besoin d’autres composants comme une antenne par exemple … Le rôle principal de ce genre de carte est donc de faciliter les connexions, ce sont des cartes de développement qui permettent de réaliser des tests facilement et rapidement, notamment en intégrant (généralement) une interface USB pour programmer facilement le µC (la partie USB est gérée soit par une puce dédiée sur la carte, soit par le µC directement si il est compatible avec cette fonctionnalité). Mais on pourrait très bien utiliser le µC en dehors de sa carte en lui apportant le minimum de composants requis pour qu’il fonctionne (donc pas grand chose). Concept de l’IDE Arduino Malgré ses défauts, cet environnement de développement Arduino a l’avantage de simplifier énormément la compilation et le transfert des programmes pour toutes les cartes compatibles Arduino grâce à un gestionnaire de librairies très facile à utiliser ainsi qu’un gestionnaire de cartes qui permet d’ajouter de nouvelles cartes et/ou de nouvelles options pour certaines cartes. En quelques cliques on peut donc compiler et téléverser (hmm, alors, cette traduction est aussi sujet à débat, mais c’est la traduction officielle …) le programme sur une carte gérée par l’IDE. Heureusement, vous pouvez éditer votre code dans votre éditeur favori puis utiliser l’IDE Arduino uniquement pour la compilation et la programmation de votre carte. Il existe évidemment d’autres alternatives pour ne pas utiliser l’IDE Arduino, comme PlatformIO, mais je ne vais pas traiter ce sujet ici. Dans cet article nous verrons comment nous passer du framework et de l’IDE Arduino en utilisant directement les outils AVR (voir dans les prochains chapitres) ! Concept du framework Arduino Le framework Arduino a pour objectif de rendre facilement accessible la programmation d’un certain nombre de µC, mais aussi de rendre compatible le code pour une grande partie des µC compatibles Arduino. En effet, chaque modèle de µC a ses propres caractéristiques/spécificités, notamment au niveau de la répartition des GPIO et des adresses mémoire à utiliser pour atteindre ces GPIO ainsi que les différents périphériques du µC. En utilisant le framework, inutile d’aller lire la documentation du µC pour savoir quelle adresse mémoire (ou registre) utiliser etc…, c’est le framework qui gère tout ça pour nous ! Cela permet donc d’avoir un code identique pour une grande partie des µC compatibles Arduino. Ce qui est un sacré avantage pour l’apprentissage et pour le partage ! Evidemment, si vous partagez un code qui utilise 50 GPIO d’un Arduino Mega … vous ne pourrez pas l’utiliser directement sur un Arduino UNO (qui possède seulement 20 GPIO). Le framework n’est pas magique, il ne va pas créer ce qui n’existe pas … (pour certaines fonctionnalités ou certains périphériques il peut proposer une solution software quand c’est possible). Comparaison d’un code Arduino avec et sans framework J’ai hésité à faire des benchmark pour comparer les performances d’un “même” code avec et sans framework mais ça impliquerait de rentrer beaucoup plus dans les détails de tout un tas de fonctionnalités et ça ferait un article interminable … (peut-être pour un prochain article) Donc pour simplifier la comparaison, je me suis limité à comparer la taille des binaires (la quantité de mémoire flash utilisée pour stocker le programme dans le µC). Quand on parle de programme de test sur un Arduino, le plus populaire est sans conteste le Blink qui permet tout simplement de faire clignoter une LED à intervalle régulier. Généralement, les cartes Arduino ont une LED intégrée sur la carte, ce qui permet de tester directement sans aucun branchement autre que l’alimentation. On va voir ci-dessous différentes façons de réaliser ce Blink. J’utilise un Arduino UNO pour ce programme de test ! C’est donc un µC ATmega328 (processeur AVR, donc utilisation de la lib et des outils AVR). 1 - Code Arduino, Compilateur IDE Arduino Le code Blink officiel : void setup() { pinMode(LED_BUILTIN, OUTPUT); } void loop() { digitalWrite(LED_BUILTIN, HIGH); delay(1000); digitalWrite(LED_BUILTIN, LOW); delay(1000); } Mémoire utilisée : 924 octets Compatibilité : Toutes les cartes compatibles Arduino Certaines cartes n’ont pas de LED intégrée, auquel cas il faut l’ajouter pour le test. 2 - Code Arduino optimisé 1, Compilateur IDE Arduino Première optimisation en remplaçant delay du framework Arduino par _delay_ms de la lib AVR : void setup() { pinMode(LED_BUILTIN, OUTPUT); } void loop() { digitalWrite(LED_BUILTIN, HIGH); _delay_ms(1000); digitalWrite(LED_BUILTIN, LOW); _delay_ms(1000); } Mémoire utilisée : 770 octets Compatibilité : Cartes Arduino basées sur un µC AVR Et éventuellement d’autres si la fonction _delay_ms existe dans la lib du µC en question. 154 octets de gagnés juste en utilisant une autre fonction de délais, mais au détriment d’une compatibilité limitée aux µC AVR. 3 - Code Arduino optimisé 2, Compilateur IDE Arduino Seconde optimisation en utilisant directement les registres pour configurer et manipuler le GPIO LED_BUILTIN (qui correspond à la GPIO 13) : void setup(){ DDRB = 0b00100000; } void loop(){ PORTB |= 0b00100000; _delay_ms(1000); PORTB &amp;= 0b11011111; _delay_ms(1000); } Mémoire utilisée : 488 octets Compatibilité : Cartes Arduino basées sur un µC AVR et dont le bit 5 du registre B correspond bien au bon GPIO Parmi les cartes Arduino officielles les plus connues, les suivantes son compatibles : Duemilanove, Mini, Nano, Pro Mini, Uno Pour déterminer le registre et le bit à utiliser, soit il faut lire le datasheet du µC, soit il faut regarder le pinout de la carte et/ou celui du µC (pinout arduino uno dans une recherche d’images). Dans le cas présent, on constate que le GPIO 13 est sur le port PB5, ce qui correspond au port/registre B et au bit 5. L’utilisation des registres permet, dans le cas présent, d’économiser 282 octets ! Cependant, les registres dépendent des µC … comme évoqué précédemment, d’un modèle de µC à un autre, les GPIO et autres périphériques sont généralement attribués à des adresses/registres/ports différents. Mais il y a au moins deux gros avantages à utiliser les registres : Au niveau des performances c’est le top, on ne pourra pas faire mieux (et comparé aux fonctions du framework c’est un gain énorme en performance) On peut manipuler plusieurs GPIO d’un coup ! Dans le cas présent on peut manipuler 8 GPIO d’un coup (sur un ESP32 on peut manipuler 32 GPIO d’un coup) 4 - Code avec lib AVR uniquement, Compilateur IDE Arduino __attribute__((weak)) int main(){ DDRB = 0b00100000; for(;;){ PORTB |= 0b00100000; _delay_ms(1000); PORTB &amp;= 0b11011111; _delay_ms(1000); } return 0; } Mémoire utilisée : 178 octets Compatibilité : Même compatibilité que le code précédent Les fonctions setup et loop font partie du framework Arduino, mais derrière ces deux fonction il y a un main ! En réécrivant la fonction main on gagne 310 octets ! Cet écart est principalement lié à l’appel de la fonction init qui est exécuté au début du main du framework. Cette fonction init permet d’activer les interruptions et de paramétrer les registres des timers et de l’ADC. Pour notre Blink on peut s’en passer, mais si le programme a besoin d’utiliser certaines de ces fonctionnalités alors il faudra s’assurer qu’ils sont bien paramétrés. 5 - Code avec lib AVR uniquement, Compilateur avr-gcc #define F_CPU 16000000UL #include &lt;avr/io.h&gt; #include &lt;util/delay.h&gt; int main(){ DDRB = 0b00100000; for(;;){ PORTB |= 0b00100000; _delay_ms(1000); PORTB &amp;= 0b11011111; _delay_ms(1000); } return 0; } Mémoire utilisée : 178 octets Compatibilité : Même compatibilité que le code précédent MAIS il faut indiquer la fréquence de fonctionnement du µC ! Dans le cas présent, le fait de définir une mauvaise fréquence ne devrait pas bloquer le programme, mais la fonction _delay_ms ne sera pas cohérente. Exactement le même poids qu’avec le code précédent, et c’est parfaitement normal puisqu’il s’agit du même code mais avec les instructions nécessaires à la compilation en dehors de l’IDE Arduino. 6 - Code sans framework et sans lib, Compilateur avr-gcc typedef unsigned char uint8_t; typedef unsigned int uint16_t; typedef unsigned long int uint32_t; #define F_CPU 16000000UL #define DDRB (*(volatile uint8_t *)(0x24)) #define PORTB (*(volatile uint8_t *)(0x25)) void _delay_loop_2(uint16_t __count){ __asm__ volatile ( &quot;1: sbiw %0,1&quot; &quot;\n\t&quot; &quot;brne 1b&quot; : &quot;=w&quot; (__count) : &quot;0&quot; (__count) ); } void _delay_ms(double __ms){ double __tmp; uint16_t __ticks; __tmp = ((F_CPU) / 4e3) * __ms; if (__tmp &lt; 1.0) __ticks = 1; else if (__tmp &gt; 65535) { __ticks = (uint16_t) (__ms * 10.0); while(__ticks) { _delay_loop_2(((F_CPU) / 4e3) / 10); __ticks--; } return; } else __ticks = (uint16_t)__tmp; _delay_loop_2(__ticks); } int main(){ DDRB = 0b00100000; for(;;){ PORTB |= 0b00100000; _delay_ms(1000); PORTB &amp;= 0b11011111; _delay_ms(1000); } return 0; } Mémoire utilisée : 174 octets Compatibilité : Même compatibilité que le code précédent J’ai simplement copié une partie de la fonction de la lib AVR pour gérer le délais. Il y a aucun intérêt à faire ça mais c’était pour montrer cette possibilité. Vous en conviendrez, le gain de 4 octets ne justifie clairement pas de faire ce genre de code. Récapitulatif Lib Compilateur Mémoire (octets) Compatibilité Code 1 Arduino IDE Arduino 924 Arduino Code 2 Arduino + AVR IDE Arduino 770 µC AVR Code 3 Arduino + AVR IDE Arduino 488 µC AVR avec les mêmes registres Code 4 AVR IDE Arduino 178 µC AVR avec les mêmes registres Code 5 AVR avr-gcc 178 µC AVR avec les mêmes registres Code 6 - avr-gcc 174 µC AVR avec les mêmes registres Dès qu’on utilise des éléments de la lib AVR on se retrouve limité aux µC AVR, et dès qu’on utilise des éléments spécifiques à un µC (comme les registres) on restreint encore plus la compatibilité du code. L’IDE Arduino utilise également avr-gcc pour les cartes basées sur un µC AVR, mais il va automatiquement inclure son framework ainsi qu’une grande partie de la lib AVR. C’est pour cela que les codes compilés dans l’IDE Arduino n’ont pas besoin d’include pour utiliser les fonctionnalités du framework et une grande partie des fonctionnalités de la lib AVR. Pour compiler avec avr-gcc j’ai utilisé exactement les mêmes options que l’IDE Arduino (sans forcément chercher à quoi elles servent), le but n’étant pas de voir si les options de compilation sont réellement optimales mais plutôt de comparer le résultat final avec les même options compilation. Voici les commandes pour compiler et récupérer le binaire : avr-gcc -Wall -Wextra -Os -g -flto -fuse-linker-plugin -Wl,--gc-sections -mmcu=atmega328p blink.c -o blink.elf avr-objcopy -O binary blink.elf blink.bin Et la commande pour programmer votre Arduino : avrdude -c arduino -p m328p -P COMX -b 115200 -U flash:w:blink.bin Evidemment il faut remplacer COMX (/dev/ttySX sous linux) par le bon port série. Si votre Arduino possède un ancien bootloader, vous devrez passer en baudrate 57600 (-b 57600) au lieu de 115200. Au besoin, adaptez également l’option -p pour correspondre à votre µC (pour obtenir la liste, tapez cette commande : avrdude -c avrisp). Conclusion La différence de poids peut sembler énorme, et elle l’est pour un simple Blink ! Mais sur un programme bien plus gros, la différence de poids serait beaucoup moins impressionnante. Certes on gagnera toujours de l’espace en limitant l’utilisation des fonctions Arduino, mais toujours au détriment de la compatibilité entre les différents µC. Et comme évoqué précédemment, il y a aussi les performances qui rentrent en jeu ! L’utilisation des registres permet vraiment un gros gain, autant en poids qu’en performance. Suivant les contraintes de votre projet vous n’aurez peut-être pas le choix, si vous avez besoin d’optimiser au maximum les performances, et éventuellement la mémoire nécessaire, alors il faudra abandonner le framework Arduino et donc abandonner la compatibilité Arduino. Quoi qu’il en soit, pour débuter avec les µC, le framework Arduino est vraiment très bien conçu ! Pour partager son projet avec un maximum de personnes et surtout permettre de réutiliser votre code facilement, il est également très intéressant d’utiliser ce framework. C’est donc des choix à faire … ça va dépendre de votre projet, de votre cible et de vos préférences. Evidemment, il existe aussi des µC qui ne sont pas compatibles Arduino, il y a un choix énorme dans ce domaine. Si c’est pour une utilisation pro, je pense que vous ne devriez même pas vous demander si il faut utiliser ou non le framework Arduino … Pour moi l’utilisation d’Arduino est essentiellement pour l’apprentissage, le partage et le bidouillage ! Donc pour terminer, j’estime qu’il est inacceptable de cracher sur le framework Arduino (malgré ses points négatifs), et je pense que ceux qui le font n’ont pas la bonne approche. Grâce à Arduino, l’électronique et la programmation embarquée se démocratisent de plus en plus et sont désormais très abordables pour tout le monde ! Sources et inspirations Arduino AVR Toolchain" />
+<link rel="canonical" href="https://elrindel.github.io/utiliser-arduino-sans-code-arduino-atmega328p" />
+<meta property="og:url" content="https://elrindel.github.io/utiliser-arduino-sans-code-arduino-atmega328p" />
+<meta property="og:site_name" content="Elrindel/Flob Blog" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2021-06-25T22:27:52+02:00" />
+<script type="application/ld+json">
+{"@type":"BlogPosting","headline":"Utiliser un Arduino sans code Arduino : ATmega328P","dateModified":"2021-06-25T22:27:52+02:00","url":"https://elrindel.github.io/utiliser-arduino-sans-code-arduino-atmega328p","datePublished":"2021-06-25T22:27:52+02:00","mainEntityOfPage":{"@type":"WebPage","@id":"https://elrindel.github.io/utiliser-arduino-sans-code-arduino-atmega328p"},"description":"Vous avez probablement déjà entendu parler d’Arduino, au moins en tant que carte électronique programmable pour bidouilleur (d’ailleurs j’en ai utilisé dans mes précédents articles). Si vous connaissez déjà ces cartes c’est bien, si vous avez déjà testé un petit programme Arduino c’est mieux !! En effet, cet article n’a pas pour objectif de vous présenter ni de vous initier à l’Arduino, mais plutôt d’explorer différentes façons d’écrire du code et voir quels sont les avantages et inconvénients de l’environnement Arduino, et surtout comment créer des programmes Arduino sans code Arduino. Introduction Arduino ce n’est pas seulement des cartes électroniques programmables, c’est aussi un IDE et surtout un framework, le tout open-source ! Ce framework est sujet à débat … certains lui reprochent de trop simplifier la programmation des µC (microcontrôleurs), ce qui rend le programme plus lourd (en terme de mémoire et d’exécution), pas optimisé et “limite certaines possibilités”. Enfin, ce sont les principaux arguments qu’on retrouve contre ce framework, mais nous allons voir que malgré ces points négatifs, il y a aussi du positif et ce n’est pas négligeable ! Concernant l’IDE Arduino, tout le monde semble plus ou moins d’accord sur le fait que cet environnement de développement est totalement dépassé ! C’est un véritable calvaire de coder dans cet IDE, même si c’est toujours mieux que le vieux notepad natif de Windows … (ouai bon, j’exagère un peu, c’est pas bien compliqué de faire mieux que ce vieux notepad ^^). A l’heure actuelle, ils travaillent sur une nouvelle version de l’IDE Arduino (version 2.0 dispo en beta). Même si elle semble bien mieux que la première version, il semblerait qu’elle ne soit pas encore prête à remplacer un véritable IDE. C’est quoi un microcontrôleur ? Si vous n’êtes pas déjà familier avec les cartes électroniques programmables, il est possible que vous ne saisissiez pas bien ce qu’est un µC (microcontrôleurs). Sans rentrer dans les détails, un µC est une puce électronique qui contient tous les éléments (ou presque) nécessaires à l’exécution d’un code et à la manipulation d’entrées/sorties et/ou l’utilisation de certains périphériques (DAC/ADC, liaison série, timer etc…). Chaque modèle de carte électronique programmable est basé sur un modèle de µC (dans certains cas, suivant la version d’une carte on peut trouver un µC légèrement différents). Par exemple, le très célèbre Arduino UNO utilise le non moins célèbre µC ATmega328 (tout comme l’Arduino Nano, mais ce dernier existe aussi avec un ATmega168). Ces cartes contiennent généralement assez peu de composants. Une grande partie des µC ont uniquement besoin d’une alimentation pour fonctionner. D’autres vont également avoir besoin d’un oscillateur externe, voir même d’une mémoire externe (ou plusieurs), puis suivant les périphériques présents dans le µC on peut avoir besoin d’autres composants comme une antenne par exemple … Le rôle principal de ce genre de carte est donc de faciliter les connexions, ce sont des cartes de développement qui permettent de réaliser des tests facilement et rapidement, notamment en intégrant (généralement) une interface USB pour programmer facilement le µC (la partie USB est gérée soit par une puce dédiée sur la carte, soit par le µC directement si il est compatible avec cette fonctionnalité). Mais on pourrait très bien utiliser le µC en dehors de sa carte en lui apportant le minimum de composants requis pour qu’il fonctionne (donc pas grand chose). Concept de l’IDE Arduino Malgré ses défauts, cet environnement de développement Arduino a l’avantage de simplifier énormément la compilation et le transfert des programmes pour toutes les cartes compatibles Arduino grâce à un gestionnaire de librairies très facile à utiliser ainsi qu’un gestionnaire de cartes qui permet d’ajouter de nouvelles cartes et/ou de nouvelles options pour certaines cartes. En quelques cliques on peut donc compiler et téléverser (hmm, alors, cette traduction est aussi sujet à débat, mais c’est la traduction officielle …) le programme sur une carte gérée par l’IDE. Heureusement, vous pouvez éditer votre code dans votre éditeur favori puis utiliser l’IDE Arduino uniquement pour la compilation et la programmation de votre carte. Il existe évidemment d’autres alternatives pour ne pas utiliser l’IDE Arduino, comme PlatformIO, mais je ne vais pas traiter ce sujet ici. Dans cet article nous verrons comment nous passer du framework et de l’IDE Arduino en utilisant directement les outils AVR (voir dans les prochains chapitres) ! Concept du framework Arduino Le framework Arduino a pour objectif de rendre facilement accessible la programmation d’un certain nombre de µC, mais aussi de rendre compatible le code pour une grande partie des µC compatibles Arduino. En effet, chaque modèle de µC a ses propres caractéristiques/spécificités, notamment au niveau de la répartition des GPIO et des adresses mémoire à utiliser pour atteindre ces GPIO ainsi que les différents périphériques du µC. En utilisant le framework, inutile d’aller lire la documentation du µC pour savoir quelle adresse mémoire (ou registre) utiliser etc…, c’est le framework qui gère tout ça pour nous ! Cela permet donc d’avoir un code identique pour une grande partie des µC compatibles Arduino. Ce qui est un sacré avantage pour l’apprentissage et pour le partage ! Evidemment, si vous partagez un code qui utilise 50 GPIO d’un Arduino Mega … vous ne pourrez pas l’utiliser directement sur un Arduino UNO (qui possède seulement 20 GPIO). Le framework n’est pas magique, il ne va pas créer ce qui n’existe pas … (pour certaines fonctionnalités ou certains périphériques il peut proposer une solution software quand c’est possible). Comparaison d’un code Arduino avec et sans framework J’ai hésité à faire des benchmark pour comparer les performances d’un “même” code avec et sans framework mais ça impliquerait de rentrer beaucoup plus dans les détails de tout un tas de fonctionnalités et ça ferait un article interminable … (peut-être pour un prochain article) Donc pour simplifier la comparaison, je me suis limité à comparer la taille des binaires (la quantité de mémoire flash utilisée pour stocker le programme dans le µC). Quand on parle de programme de test sur un Arduino, le plus populaire est sans conteste le Blink qui permet tout simplement de faire clignoter une LED à intervalle régulier. Généralement, les cartes Arduino ont une LED intégrée sur la carte, ce qui permet de tester directement sans aucun branchement autre que l’alimentation. On va voir ci-dessous différentes façons de réaliser ce Blink. J’utilise un Arduino UNO pour ce programme de test ! C’est donc un µC ATmega328 (processeur AVR, donc utilisation de la lib et des outils AVR). 1 - Code Arduino, Compilateur IDE Arduino Le code Blink officiel : void setup() { pinMode(LED_BUILTIN, OUTPUT); } void loop() { digitalWrite(LED_BUILTIN, HIGH); delay(1000); digitalWrite(LED_BUILTIN, LOW); delay(1000); } Mémoire utilisée : 924 octets Compatibilité : Toutes les cartes compatibles Arduino Certaines cartes n’ont pas de LED intégrée, auquel cas il faut l’ajouter pour le test. 2 - Code Arduino optimisé 1, Compilateur IDE Arduino Première optimisation en remplaçant delay du framework Arduino par _delay_ms de la lib AVR : void setup() { pinMode(LED_BUILTIN, OUTPUT); } void loop() { digitalWrite(LED_BUILTIN, HIGH); _delay_ms(1000); digitalWrite(LED_BUILTIN, LOW); _delay_ms(1000); } Mémoire utilisée : 770 octets Compatibilité : Cartes Arduino basées sur un µC AVR Et éventuellement d’autres si la fonction _delay_ms existe dans la lib du µC en question. 154 octets de gagnés juste en utilisant une autre fonction de délais, mais au détriment d’une compatibilité limitée aux µC AVR. 3 - Code Arduino optimisé 2, Compilateur IDE Arduino Seconde optimisation en utilisant directement les registres pour configurer et manipuler le GPIO LED_BUILTIN (qui correspond à la GPIO 13) : void setup(){ DDRB = 0b00100000; } void loop(){ PORTB |= 0b00100000; _delay_ms(1000); PORTB &amp;= 0b11011111; _delay_ms(1000); } Mémoire utilisée : 488 octets Compatibilité : Cartes Arduino basées sur un µC AVR et dont le bit 5 du registre B correspond bien au bon GPIO Parmi les cartes Arduino officielles les plus connues, les suivantes son compatibles : Duemilanove, Mini, Nano, Pro Mini, Uno Pour déterminer le registre et le bit à utiliser, soit il faut lire le datasheet du µC, soit il faut regarder le pinout de la carte et/ou celui du µC (pinout arduino uno dans une recherche d’images). Dans le cas présent, on constate que le GPIO 13 est sur le port PB5, ce qui correspond au port/registre B et au bit 5. L’utilisation des registres permet, dans le cas présent, d’économiser 282 octets ! Cependant, les registres dépendent des µC … comme évoqué précédemment, d’un modèle de µC à un autre, les GPIO et autres périphériques sont généralement attribués à des adresses/registres/ports différents. Mais il y a au moins deux gros avantages à utiliser les registres : Au niveau des performances c’est le top, on ne pourra pas faire mieux (et comparé aux fonctions du framework c’est un gain énorme en performance) On peut manipuler plusieurs GPIO d’un coup ! Dans le cas présent on peut manipuler 8 GPIO d’un coup (sur un ESP32 on peut manipuler 32 GPIO d’un coup) 4 - Code avec lib AVR uniquement, Compilateur IDE Arduino __attribute__((weak)) int main(){ DDRB = 0b00100000; for(;;){ PORTB |= 0b00100000; _delay_ms(1000); PORTB &amp;= 0b11011111; _delay_ms(1000); } return 0; } Mémoire utilisée : 178 octets Compatibilité : Même compatibilité que le code précédent Les fonctions setup et loop font partie du framework Arduino, mais derrière ces deux fonction il y a un main ! En réécrivant la fonction main on gagne 310 octets ! Cet écart est principalement lié à l’appel de la fonction init qui est exécuté au début du main du framework. Cette fonction init permet d’activer les interruptions et de paramétrer les registres des timers et de l’ADC. Pour notre Blink on peut s’en passer, mais si le programme a besoin d’utiliser certaines de ces fonctionnalités alors il faudra s’assurer qu’ils sont bien paramétrés. 5 - Code avec lib AVR uniquement, Compilateur avr-gcc #define F_CPU 16000000UL #include &lt;avr/io.h&gt; #include &lt;util/delay.h&gt; int main(){ DDRB = 0b00100000; for(;;){ PORTB |= 0b00100000; _delay_ms(1000); PORTB &amp;= 0b11011111; _delay_ms(1000); } return 0; } Mémoire utilisée : 178 octets Compatibilité : Même compatibilité que le code précédent MAIS il faut indiquer la fréquence de fonctionnement du µC ! Dans le cas présent, le fait de définir une mauvaise fréquence ne devrait pas bloquer le programme, mais la fonction _delay_ms ne sera pas cohérente. Exactement le même poids qu’avec le code précédent, et c’est parfaitement normal puisqu’il s’agit du même code mais avec les instructions nécessaires à la compilation en dehors de l’IDE Arduino. 6 - Code sans framework et sans lib, Compilateur avr-gcc typedef unsigned char uint8_t; typedef unsigned int uint16_t; typedef unsigned long int uint32_t; #define F_CPU 16000000UL #define DDRB (*(volatile uint8_t *)(0x24)) #define PORTB (*(volatile uint8_t *)(0x25)) void _delay_loop_2(uint16_t __count){ __asm__ volatile ( &quot;1: sbiw %0,1&quot; &quot;\\n\\t&quot; &quot;brne 1b&quot; : &quot;=w&quot; (__count) : &quot;0&quot; (__count) ); } void _delay_ms(double __ms){ double __tmp; uint16_t __ticks; __tmp = ((F_CPU) / 4e3) * __ms; if (__tmp &lt; 1.0) __ticks = 1; else if (__tmp &gt; 65535) { __ticks = (uint16_t) (__ms * 10.0); while(__ticks) { _delay_loop_2(((F_CPU) / 4e3) / 10); __ticks--; } return; } else __ticks = (uint16_t)__tmp; _delay_loop_2(__ticks); } int main(){ DDRB = 0b00100000; for(;;){ PORTB |= 0b00100000; _delay_ms(1000); PORTB &amp;= 0b11011111; _delay_ms(1000); } return 0; } Mémoire utilisée : 174 octets Compatibilité : Même compatibilité que le code précédent J’ai simplement copié une partie de la fonction de la lib AVR pour gérer le délais. Il y a aucun intérêt à faire ça mais c’était pour montrer cette possibilité. Vous en conviendrez, le gain de 4 octets ne justifie clairement pas de faire ce genre de code. Récapitulatif Lib Compilateur Mémoire (octets) Compatibilité Code 1 Arduino IDE Arduino 924 Arduino Code 2 Arduino + AVR IDE Arduino 770 µC AVR Code 3 Arduino + AVR IDE Arduino 488 µC AVR avec les mêmes registres Code 4 AVR IDE Arduino 178 µC AVR avec les mêmes registres Code 5 AVR avr-gcc 178 µC AVR avec les mêmes registres Code 6 - avr-gcc 174 µC AVR avec les mêmes registres Dès qu’on utilise des éléments de la lib AVR on se retrouve limité aux µC AVR, et dès qu’on utilise des éléments spécifiques à un µC (comme les registres) on restreint encore plus la compatibilité du code. L’IDE Arduino utilise également avr-gcc pour les cartes basées sur un µC AVR, mais il va automatiquement inclure son framework ainsi qu’une grande partie de la lib AVR. C’est pour cela que les codes compilés dans l’IDE Arduino n’ont pas besoin d’include pour utiliser les fonctionnalités du framework et une grande partie des fonctionnalités de la lib AVR. Pour compiler avec avr-gcc j’ai utilisé exactement les mêmes options que l’IDE Arduino (sans forcément chercher à quoi elles servent), le but n’étant pas de voir si les options de compilation sont réellement optimales mais plutôt de comparer le résultat final avec les même options compilation. Voici les commandes pour compiler et récupérer le binaire : avr-gcc -Wall -Wextra -Os -g -flto -fuse-linker-plugin -Wl,--gc-sections -mmcu=atmega328p blink.c -o blink.elf avr-objcopy -O binary blink.elf blink.bin Et la commande pour programmer votre Arduino : avrdude -c arduino -p m328p -P COMX -b 115200 -U flash:w:blink.bin Evidemment il faut remplacer COMX (/dev/ttySX sous linux) par le bon port série. Si votre Arduino possède un ancien bootloader, vous devrez passer en baudrate 57600 (-b 57600) au lieu de 115200. Au besoin, adaptez également l’option -p pour correspondre à votre µC (pour obtenir la liste, tapez cette commande : avrdude -c avrisp). Conclusion La différence de poids peut sembler énorme, et elle l’est pour un simple Blink ! Mais sur un programme bien plus gros, la différence de poids serait beaucoup moins impressionnante. Certes on gagnera toujours de l’espace en limitant l’utilisation des fonctions Arduino, mais toujours au détriment de la compatibilité entre les différents µC. Et comme évoqué précédemment, il y a aussi les performances qui rentrent en jeu ! L’utilisation des registres permet vraiment un gros gain, autant en poids qu’en performance. Suivant les contraintes de votre projet vous n’aurez peut-être pas le choix, si vous avez besoin d’optimiser au maximum les performances, et éventuellement la mémoire nécessaire, alors il faudra abandonner le framework Arduino et donc abandonner la compatibilité Arduino. Quoi qu’il en soit, pour débuter avec les µC, le framework Arduino est vraiment très bien conçu ! Pour partager son projet avec un maximum de personnes et surtout permettre de réutiliser votre code facilement, il est également très intéressant d’utiliser ce framework. C’est donc des choix à faire … ça va dépendre de votre projet, de votre cible et de vos préférences. Evidemment, il existe aussi des µC qui ne sont pas compatibles Arduino, il y a un choix énorme dans ce domaine. Si c’est pour une utilisation pro, je pense que vous ne devriez même pas vous demander si il faut utiliser ou non le framework Arduino … Pour moi l’utilisation d’Arduino est essentiellement pour l’apprentissage, le partage et le bidouillage ! Donc pour terminer, j’estime qu’il est inacceptable de cracher sur le framework Arduino (malgré ses points négatifs), et je pense que ceux qui le font n’ont pas la bonne approche. Grâce à Arduino, l’électronique et la programmation embarquée se démocratisent de plus en plus et sont désormais très abordables pour tout le monde ! Sources et inspirations Arduino AVR Toolchain","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+<link rel="shortcut icon" href="/favicon.ico" type="image/icon">
+<link rel="icon" href="/favicon.ico" type="image/icon">
+<!-- stylesheets -->
+<link rel="stylesheet" type="text/css" href="/assets/css/base.css?v=1.0.4">
+<link rel="stylesheet" type="text/css" href="/assets/css/simpleLightbox.min.css">
+
+  <link rel="stylesheet" type="text/css" href="/assets/css/highlight-theme.css">
+  <link rel="stylesheet" type="text/css" href="/assets/css/rouge-code.css">
+
+
+  <link rel="stylesheet" type="text/css" href="/assets/css/post.css?v=1.0.4">
+
+<!--[if lt IE 9]>
+<script src="/assets/js/html5shiv.js"></script>
+<![endif]-->
+
+</head>
+
+  <body>
+    <header id="l-header">
+    <div class="container">
+        <div class="row logo">
+            <div class="col-lg-7">
+                <div class="blog-title"><a href="/">Elrindel/Flob</a></div>
+            </div>
+            <div class="col-lg-5">
+              
+            </div>
+        </div>
+        <div class="navicon">
+            <i class="gg-menu"></i>
+        </div>
+        <div class="row navbar">
+            <nav class="col-md-12">
+                <ul class="row">
+                    <li class="col-lg-3"><a href="/">Accueil</a></li>
+                    <li class="col-lg-3"><a href="https://github.com/Elrindel/" target="_blank">Github</a></li>
+                    <li class="col-lg-3"><a href="/liens">Liens</a></li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</header>
+    <section id="l-main">
+      <div class="container">
+        <div class="row">
+  <div id="markdown-container" class="col-lg-9">
+    <header>
+      <h1 id="post-title">Utiliser un Arduino sans code Arduino : ATmega328P</h1>
+      
+      <ul class="tags clearfix">
+        
+      </ul>
+      
+      <p id="post-meta">Publié le : <b>25 Jun 2021</b>
+        
+        Catégories : <b>Arduino</b>
+        
+      </p>
+    </header>
+    <p>Vous avez probablement déjà entendu parler d’<strong>Arduino</strong>, au moins en tant que <strong>carte électronique programmable</strong> pour bidouilleur (d’ailleurs j’en ai utilisé dans mes précédents articles).<br />
+Si vous connaissez déjà ces cartes c’est bien, si vous avez déjà testé un petit <strong>programme Arduino</strong> c’est mieux !!</p>
+
+<p>En effet, cet article n’a pas pour objectif de vous présenter ni de vous initier à l’<strong>Arduino</strong>, mais plutôt d’explorer différentes façons d’écrire du code et voir quels sont les avantages et inconvénients de l’<strong>environnement Arduino</strong>, et surtout comment <strong>créer des programmes Arduino sans code Arduino</strong>.</p>
+
+<h2 id="introduction">Introduction</h2>
+
+<p><strong>Arduino</strong> ce n’est pas seulement des <strong>cartes électroniques programmables</strong>, c’est aussi un <strong>IDE</strong> et surtout un <strong>framework</strong>, le tout <strong>open-source</strong> !</p>
+
+<p>Ce <strong>framework</strong> est sujet à débat … certains lui reprochent de trop simplifier la programmation des <code class="highlighter-rouge">µC</code> <em>(microcontrôleurs)</em>, ce qui rend le programme plus lourd (en terme de mémoire et d’exécution), pas optimisé et “limite certaines possibilités”.<br />
+Enfin, ce sont les principaux arguments qu’on retrouve contre ce <strong>framework</strong>, mais nous allons voir que malgré ces points négatifs, il y a aussi du positif et ce n’est pas négligeable !</p>
+
+<p>Concernant l’<strong>IDE Arduino</strong>, tout le monde semble plus ou moins d’accord sur le fait que cet environnement de développement est totalement dépassé !<br />
+C’est un véritable calvaire de coder dans cet <strong>IDE</strong>, même si c’est toujours mieux que le vieux notepad natif de Windows … (ouai bon, j’exagère un peu, c’est pas bien compliqué de faire mieux que ce vieux notepad ^^).<br />
+<em>A l’heure actuelle, ils travaillent sur une nouvelle version de l’IDE Arduino (version 2.0 dispo en beta). Même si elle semble bien mieux que la première version, il semblerait qu’elle ne soit pas encore prête à remplacer un véritable IDE.</em></p>
+
+<h3 id="cest-quoi-un-microcontrôleur-">C’est quoi un microcontrôleur ?</h3>
+
+<p>Si vous n’êtes pas déjà familier avec les cartes électroniques programmables, il est possible que vous ne saisissiez pas bien ce qu’est un <code class="highlighter-rouge">µC</code> <em>(microcontrôleurs)</em>.</p>
+
+<p>Sans rentrer dans les détails, un <code class="highlighter-rouge">µC</code> est une puce électronique qui contient tous les éléments (ou presque) nécessaires à l’exécution d’un code et à la manipulation d’entrées/sorties et/ou l’utilisation de certains périphériques (DAC/ADC, liaison série, timer etc…).</p>
+
+<p>Chaque modèle de carte électronique programmable est basé sur un modèle de <code class="highlighter-rouge">µC</code> (dans certains cas, suivant la version d’une carte on peut trouver un µC légèrement différents).</p>
+
+<p>Par exemple, le très célèbre <strong>Arduino UNO</strong> utilise le non moins célèbre <code class="highlighter-rouge">µC</code> <strong>ATmega328</strong> (tout comme l’<strong>Arduino Nano</strong>, mais ce dernier existe aussi avec un <strong>ATmega168</strong>).</p>
+
+<p>Ces cartes contiennent généralement assez peu de composants.<br />
+Une grande partie des <code class="highlighter-rouge">µC</code> ont uniquement besoin d’une alimentation pour fonctionner. D’autres vont également avoir besoin d’un oscillateur externe, voir même d’une mémoire externe (ou plusieurs), puis suivant les périphériques présents dans le <code class="highlighter-rouge">µC</code> on peut avoir besoin d’autres composants comme une antenne par exemple …</p>
+
+<p>Le rôle principal de ce genre de carte est donc de faciliter les connexions, ce sont des cartes de développement qui permettent de réaliser des tests facilement et rapidement, notamment en intégrant (généralement) une interface USB pour programmer facilement le <code class="highlighter-rouge">µC</code> (la partie USB est gérée soit par une puce dédiée sur la carte, soit par le <code class="highlighter-rouge">µC</code> directement si il est compatible avec cette fonctionnalité).<br />
+Mais on pourrait très bien utiliser le <code class="highlighter-rouge">µC</code> en dehors de sa carte en lui apportant le minimum de composants requis pour qu’il fonctionne (donc pas grand chose).</p>
+
+<h2 id="concept-de-lide-arduino">Concept de l’IDE Arduino</h2>
+
+<p>Malgré ses défauts, cet <strong>environnement de développement Arduino</strong> a l’avantage de simplifier énormément la compilation et le transfert des programmes pour toutes les cartes compatibles <strong>Arduino</strong> grâce à un gestionnaire de librairies très facile à utiliser ainsi qu’un gestionnaire de cartes qui permet d’ajouter de nouvelles cartes et/ou de nouvelles options pour certaines cartes.</p>
+
+<p>En quelques cliques on peut donc compiler et téléverser <em>(hmm, alors, cette traduction est aussi sujet à débat, mais c’est la traduction officielle …)</em> le programme sur une carte gérée par l’<strong>IDE</strong>.</p>
+
+<p>Heureusement, vous pouvez éditer votre code dans votre éditeur favori puis utiliser l’<strong>IDE Arduino</strong> uniquement pour la compilation et la programmation de votre carte.</p>
+
+<p>Il existe évidemment d’autres alternatives pour ne pas utiliser l’<strong>IDE Arduino</strong>, comme <strong>PlatformIO</strong>, mais je ne vais pas traiter ce sujet ici.</p>
+
+<p><strong>Dans cet article nous verrons comment nous passer du framework et de l’IDE Arduino en utilisant directement les outils AVR (voir dans les prochains chapitres) !</strong></p>
+
+<h2 id="concept-du-framework-arduino">Concept du framework Arduino</h2>
+
+<p>Le <strong>framework Arduino</strong> a pour objectif de rendre facilement accessible la programmation d’un certain nombre de <code class="highlighter-rouge">µC</code>, mais aussi de rendre compatible le code pour une grande partie des <strong><code class="highlighter-rouge">µC</code> compatibles Arduino</strong>.</p>
+
+<p>En effet, chaque modèle de <code class="highlighter-rouge">µC</code> a ses propres caractéristiques/spécificités, notamment au niveau de la répartition des GPIO et des adresses mémoire à utiliser pour atteindre ces GPIO ainsi que les différents périphériques du <code class="highlighter-rouge">µC</code>.<br />
+En utilisant le framework, inutile d’aller lire la documentation du <code class="highlighter-rouge">µC</code> pour savoir quelle adresse mémoire (ou registre) utiliser etc…, c’est le framework qui gère tout ça pour nous !</p>
+
+<p>Cela permet donc d’avoir un code identique pour une grande partie des <code class="highlighter-rouge">µC</code> compatibles Arduino.<br />
+Ce qui est un sacré avantage pour l’apprentissage et pour le partage !</p>
+
+<p>Evidemment, si vous partagez un code qui utilise 50 GPIO d’un <strong>Arduino Mega</strong> … vous ne pourrez pas l’utiliser directement sur un <strong>Arduino UNO</strong> (qui possède seulement 20 GPIO).<br />
+Le framework n’est pas magique, il ne va pas créer ce qui n’existe pas … (pour certaines fonctionnalités ou certains périphériques il peut proposer une solution software quand c’est possible).</p>
+
+<h2 id="comparaison-dun-code-arduino-avec-et-sans-framework">Comparaison d’un code Arduino avec et sans framework</h2>
+
+<p>J’ai hésité à faire des benchmark pour comparer les performances d’un “même” code avec et sans framework mais ça impliquerait de rentrer beaucoup plus dans les détails de tout un tas de fonctionnalités et ça ferait un article interminable … (peut-être pour un prochain article)<br />
+Donc pour simplifier la comparaison, je me suis limité à comparer la taille des binaires (la quantité de mémoire flash utilisée pour stocker le programme dans le <code class="highlighter-rouge">µC</code>).</p>
+
+<p>Quand on parle de programme de test sur un <strong>Arduino</strong>, le plus populaire est sans conteste le <code class="highlighter-rouge">Blink</code> qui permet tout simplement de faire clignoter une LED à intervalle régulier.<br />
+Généralement, les cartes <strong>Arduino</strong> ont une LED intégrée sur la carte, ce qui permet de tester directement sans aucun branchement autre que l’alimentation.</p>
+
+<p>On va voir ci-dessous différentes façons de réaliser ce <code class="highlighter-rouge">Blink</code>.</p>
+
+<p><strong>J’utilise un Arduino UNO pour ce programme de test ! C’est donc un <code class="highlighter-rouge">µC</code> ATmega328 (processeur AVR, donc utilisation de la lib et des outils AVR).</strong></p>
+
+<h3 id="1---code-arduino-compilateur-ide-arduino">1 - Code Arduino, Compilateur IDE Arduino</h3>
+
+<p>Le code <code class="highlighter-rouge">Blink</code> officiel :</p>
+
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span> <span class="nf">setup</span><span class="p">()</span> <span class="p">{</span>
+    <span class="n">pinMode</span><span class="p">(</span><span class="n">LED_BUILTIN</span><span class="p">,</span> <span class="n">OUTPUT</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="kt">void</span> <span class="nf">loop</span><span class="p">()</span> <span class="p">{</span>
+    <span class="n">digitalWrite</span><span class="p">(</span><span class="n">LED_BUILTIN</span><span class="p">,</span> <span class="n">HIGH</span><span class="p">);</span>
+    <span class="n">delay</span><span class="p">(</span><span class="mi">1000</span><span class="p">);</span>
+    <span class="n">digitalWrite</span><span class="p">(</span><span class="n">LED_BUILTIN</span><span class="p">,</span> <span class="n">LOW</span><span class="p">);</span>
+    <span class="n">delay</span><span class="p">(</span><span class="mi">1000</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p><strong>Mémoire utilisée :</strong> <code class="highlighter-rouge">924 octets</code></p>
+
+<p><strong>Compatibilité :</strong> <code class="highlighter-rouge">Toutes les cartes compatibles Arduino</code></p>
+
+<p>Certaines cartes n’ont pas de LED intégrée, auquel cas il faut l’ajouter pour le test.</p>
+
+<h3 id="2---code-arduino-optimisé-1-compilateur-ide-arduino">2 - Code Arduino optimisé 1, Compilateur IDE Arduino</h3>
+
+<p>Première optimisation en remplaçant <code class="highlighter-rouge">delay</code> du <strong>framework Arduino</strong> par <code class="highlighter-rouge">_delay_ms</code> de la <strong>lib AVR</strong> :</p>
+
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span> <span class="nf">setup</span><span class="p">()</span> <span class="p">{</span>
+    <span class="n">pinMode</span><span class="p">(</span><span class="n">LED_BUILTIN</span><span class="p">,</span> <span class="n">OUTPUT</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="kt">void</span> <span class="nf">loop</span><span class="p">()</span> <span class="p">{</span>
+    <span class="n">digitalWrite</span><span class="p">(</span><span class="n">LED_BUILTIN</span><span class="p">,</span> <span class="n">HIGH</span><span class="p">);</span>
+    <span class="n">_delay_ms</span><span class="p">(</span><span class="mi">1000</span><span class="p">);</span>
+    <span class="n">digitalWrite</span><span class="p">(</span><span class="n">LED_BUILTIN</span><span class="p">,</span> <span class="n">LOW</span><span class="p">);</span>
+    <span class="n">_delay_ms</span><span class="p">(</span><span class="mi">1000</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p><strong>Mémoire utilisée :</strong> <code class="highlighter-rouge">770 octets</code></p>
+
+<p><strong>Compatibilité :</strong> <code class="highlighter-rouge">Cartes Arduino basées sur un µC AVR</code><br />
+<em>Et éventuellement d’autres si la fonction <code class="highlighter-rouge">_delay_ms</code> existe dans la lib du µC en question.</em></p>
+
+<p><code class="highlighter-rouge">154 octets</code> de gagnés juste en utilisant une autre fonction de délais, mais au détriment d’une compatibilité limitée aux µC AVR.</p>
+
+<h3 id="3---code-arduino-optimisé-2-compilateur-ide-arduino">3 - Code Arduino optimisé 2, Compilateur IDE Arduino</h3>
+
+<p>Seconde optimisation en utilisant directement les registres pour configurer et manipuler le GPIO <code class="highlighter-rouge">LED_BUILTIN</code> (qui correspond à la GPIO 13) :</p>
+
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span> <span class="nf">setup</span><span class="p">(){</span>
+    <span class="n">DDRB</span> <span class="o">=</span> <span class="mb">0b00100000</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">loop</span><span class="p">(){</span>
+    <span class="n">PORTB</span> <span class="o">|=</span> <span class="mb">0b00100000</span><span class="p">;</span>
+    <span class="n">_delay_ms</span><span class="p">(</span><span class="mi">1000</span><span class="p">);</span>
+    <span class="n">PORTB</span> <span class="o">&amp;=</span> <span class="mb">0b11011111</span><span class="p">;</span>
+    <span class="n">_delay_ms</span><span class="p">(</span><span class="mi">1000</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p><strong>Mémoire utilisée :</strong> <code class="highlighter-rouge">488 octets</code></p>
+
+<p><strong>Compatibilité :</strong> <code class="highlighter-rouge">Cartes Arduino basées sur un µC AVR et dont le bit 5 du registre B correspond bien au bon GPIO</code><br />
+<em>Parmi les cartes Arduino officielles les plus connues, les suivantes son compatibles : Duemilanove, Mini, Nano, Pro Mini, Uno</em></p>
+
+<p>Pour déterminer le registre et le bit à utiliser, soit il faut lire le datasheet du <code class="highlighter-rouge">µC</code>, soit il faut regarder le <code class="highlighter-rouge">pinout de la carte</code> et/ou celui du <code class="highlighter-rouge">µC</code> (<strong>pinout arduino uno</strong> dans une recherche d’images).<br />
+Dans le cas présent, on constate que le GPIO 13 est sur le port <code class="highlighter-rouge">PB5</code>, ce qui correspond au port/registre <code class="highlighter-rouge">B</code> et au bit <code class="highlighter-rouge">5</code>.</p>
+
+<p>L’utilisation des registres permet, dans le cas présent, d’économiser <code class="highlighter-rouge">282 octets</code> !<br />
+Cependant, les registres dépendent des µC … comme évoqué précédemment, d’un modèle de µC à un autre, les GPIO et autres périphériques sont généralement attribués à des adresses/registres/ports différents.</p>
+
+<p>Mais il y a au moins deux gros avantages à utiliser les registres :</p>
+
+<ol>
+  <li>Au niveau des performances c’est le top, on ne pourra pas faire mieux (et comparé aux fonctions du framework c’est un gain énorme en performance)</li>
+  <li>On peut manipuler plusieurs GPIO d’un coup ! Dans le cas présent on peut manipuler 8 GPIO d’un coup (sur un ESP32 on peut manipuler 32 GPIO d’un coup)</li>
+</ol>
+
+<h3 id="4---code-avec-lib-avr-uniquement-compilateur-ide-arduino">4 - Code avec lib AVR uniquement, Compilateur IDE Arduino</h3>
+
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">__attribute__</span><span class="p">((</span><span class="n">weak</span><span class="p">))</span>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(){</span>
+    <span class="n">DDRB</span> <span class="o">=</span> <span class="mb">0b00100000</span><span class="p">;</span>
+
+    <span class="k">for</span><span class="p">(;;){</span>
+        <span class="n">PORTB</span> <span class="o">|=</span> <span class="mb">0b00100000</span><span class="p">;</span>
+        <span class="n">_delay_ms</span><span class="p">(</span><span class="mi">1000</span><span class="p">);</span>
+        <span class="n">PORTB</span> <span class="o">&amp;=</span> <span class="mb">0b11011111</span><span class="p">;</span>
+        <span class="n">_delay_ms</span><span class="p">(</span><span class="mi">1000</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p><strong>Mémoire utilisée :</strong> <code class="highlighter-rouge">178 octets</code></p>
+
+<p><strong>Compatibilité :</strong> <code class="highlighter-rouge">Même compatibilité que le code précédent</code></p>
+
+<p>Les fonctions <code class="highlighter-rouge">setup</code> et <code class="highlighter-rouge">loop</code> font partie du <strong>framework Arduino</strong>, mais derrière ces deux fonction il y a un <code class="highlighter-rouge">main</code> !</p>
+
+<p>En réécrivant la fonction <code class="highlighter-rouge">main</code> on gagne <code class="highlighter-rouge">310 octets</code> !</p>
+
+<p>Cet écart est principalement lié à l’appel de la fonction <code class="highlighter-rouge">init</code> qui est exécuté au début du <code class="highlighter-rouge">main</code> du framework.<br />
+Cette fonction <code class="highlighter-rouge">init</code> permet d’activer les interruptions et de paramétrer les registres des timers et de l’ADC.<br />
+Pour notre <code class="highlighter-rouge">Blink</code> on peut s’en passer, mais si le programme a besoin d’utiliser certaines de ces fonctionnalités alors il faudra s’assurer qu’ils sont bien paramétrés.</p>
+
+<h3 id="5---code-avec-lib-avr-uniquement-compilateur-avr-gcc">5 - Code avec lib AVR uniquement, Compilateur avr-gcc</h3>
+
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#define F_CPU 16000000UL
+</span>
+<span class="cp">#include &lt;avr/io.h&gt;
+#include &lt;util/delay.h&gt;
+</span>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(){</span>
+    <span class="n">DDRB</span> <span class="o">=</span> <span class="mb">0b00100000</span><span class="p">;</span>
+
+    <span class="k">for</span><span class="p">(;;){</span>
+        <span class="n">PORTB</span> <span class="o">|=</span> <span class="mb">0b00100000</span><span class="p">;</span>
+        <span class="n">_delay_ms</span><span class="p">(</span><span class="mi">1000</span><span class="p">);</span>
+        <span class="n">PORTB</span> <span class="o">&amp;=</span> <span class="mb">0b11011111</span><span class="p">;</span>
+        <span class="n">_delay_ms</span><span class="p">(</span><span class="mi">1000</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p><strong>Mémoire utilisée :</strong> <code class="highlighter-rouge">178 octets</code></p>
+
+<p><strong>Compatibilité :</strong> <code class="highlighter-rouge">Même compatibilité que le code précédent MAIS il faut indiquer la fréquence de fonctionnement du µC !</code><br />
+<em>Dans le cas présent, le fait de définir une mauvaise fréquence ne devrait pas bloquer le programme, mais la fonction <code class="highlighter-rouge">_delay_ms</code> ne sera pas cohérente.</em></p>
+
+<p>Exactement le même poids qu’avec le code précédent, et c’est parfaitement normal puisqu’il s’agit du même code mais avec les instructions nécessaires à la compilation en dehors de l’<strong>IDE Arduino</strong>.</p>
+
+<h3 id="6---code-sans-framework-et-sans-lib-compilateur-avr-gcc">6 - Code sans framework et sans lib, Compilateur avr-gcc</h3>
+
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">typedef</span> <span class="kt">unsigned</span> <span class="kt">char</span> <span class="kt">uint8_t</span><span class="p">;</span>
+<span class="k">typedef</span> <span class="kt">unsigned</span> <span class="kt">int</span> <span class="kt">uint16_t</span><span class="p">;</span>
+<span class="k">typedef</span> <span class="kt">unsigned</span> <span class="kt">long</span> <span class="kt">int</span> <span class="kt">uint32_t</span><span class="p">;</span>
+
+<span class="cp">#define F_CPU 16000000UL
+</span>
+<span class="cp">#define DDRB (*(volatile uint8_t *)(0x24))
+#define PORTB (*(volatile uint8_t *)(0x25))
+</span>
+<span class="kt">void</span> <span class="nf">_delay_loop_2</span><span class="p">(</span><span class="kt">uint16_t</span> <span class="n">__count</span><span class="p">){</span>
+    <span class="n">__asm__</span> <span class="k">volatile</span> <span class="p">(</span>
+        <span class="s">"1: sbiw %0,1"</span> <span class="s">"</span><span class="se">\n\t</span><span class="s">"</span>
+        <span class="s">"brne 1b"</span> <span class="o">:</span> <span class="s">"=w"</span> <span class="p">(</span><span class="n">__count</span><span class="p">)</span> <span class="o">:</span> <span class="s">"0"</span> <span class="p">(</span><span class="n">__count</span><span class="p">)</span>
+    <span class="p">);</span>
+<span class="p">}</span>
+<span class="kt">void</span> <span class="nf">_delay_ms</span><span class="p">(</span><span class="kt">double</span> <span class="n">__ms</span><span class="p">){</span>
+    <span class="kt">double</span> <span class="n">__tmp</span><span class="p">;</span>
+    <span class="kt">uint16_t</span> <span class="n">__ticks</span><span class="p">;</span>
+    <span class="n">__tmp</span> <span class="o">=</span> <span class="p">((</span><span class="n">F_CPU</span><span class="p">)</span> <span class="o">/</span> <span class="mf">4e3</span><span class="p">)</span> <span class="o">*</span> <span class="n">__ms</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">__tmp</span> <span class="o">&lt;</span> <span class="mf">1.0</span><span class="p">)</span>
+        <span class="n">__ticks</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">__tmp</span> <span class="o">&gt;</span> <span class="mi">65535</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">__ticks</span> <span class="o">=</span> <span class="p">(</span><span class="kt">uint16_t</span><span class="p">)</span> <span class="p">(</span><span class="n">__ms</span> <span class="o">*</span> <span class="mf">10.0</span><span class="p">);</span>
+        <span class="k">while</span><span class="p">(</span><span class="n">__ticks</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="n">_delay_loop_2</span><span class="p">(((</span><span class="n">F_CPU</span><span class="p">)</span> <span class="o">/</span> <span class="mf">4e3</span><span class="p">)</span> <span class="o">/</span> <span class="mi">10</span><span class="p">);</span>
+            <span class="n">__ticks</span><span class="o">--</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">return</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">else</span>
+        <span class="n">__ticks</span> <span class="o">=</span> <span class="p">(</span><span class="kt">uint16_t</span><span class="p">)</span><span class="n">__tmp</span><span class="p">;</span>
+    <span class="n">_delay_loop_2</span><span class="p">(</span><span class="n">__ticks</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(){</span>
+    <span class="n">DDRB</span> <span class="o">=</span> <span class="mb">0b00100000</span><span class="p">;</span>
+
+    <span class="k">for</span><span class="p">(;;){</span>
+        <span class="n">PORTB</span> <span class="o">|=</span> <span class="mb">0b00100000</span><span class="p">;</span>
+        <span class="n">_delay_ms</span><span class="p">(</span><span class="mi">1000</span><span class="p">);</span>
+        <span class="n">PORTB</span> <span class="o">&amp;=</span> <span class="mb">0b11011111</span><span class="p">;</span>
+        <span class="n">_delay_ms</span><span class="p">(</span><span class="mi">1000</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p><strong>Mémoire utilisée :</strong> <code class="highlighter-rouge">174 octets</code></p>
+
+<p><strong>Compatibilité :</strong> <code class="highlighter-rouge">Même compatibilité que le code précédent</code><br />
+<em>J’ai simplement copié une partie de la fonction de la lib AVR pour gérer le délais. Il y a aucun intérêt à faire ça mais c’était pour montrer cette possibilité.</em></p>
+
+<p>Vous en conviendrez, le gain de <code class="highlighter-rouge">4 octets</code> ne justifie clairement pas de faire ce genre de code.</p>
+
+<h3 id="récapitulatif">Récapitulatif</h3>
+
+<table class="small">
+    <thead>
+        <tr>
+            <th></th>
+            <th>Lib</th>
+            <th>Compilateur</th>
+            <th>Mémoire (octets)</th>
+            <th>Compatibilité</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><code class="highlighter-rouge">Code 1</code></td>
+            <td>Arduino</td>
+            <td>IDE Arduino</td>
+            <td>924</td>
+            <td>Arduino</td>
+        </tr>
+        <tr>
+            <td><code class="highlighter-rouge">Code 2</code></td>
+            <td>Arduino + AVR</td>
+            <td>IDE Arduino</td>
+            <td>770</td>
+            <td>µC AVR</td>
+        </tr>
+        <tr>
+            <td><code class="highlighter-rouge">Code 3</code></td>
+            <td>Arduino + AVR</td>
+            <td>IDE Arduino</td>
+            <td>488</td>
+            <td>µC AVR avec les mêmes registres</td>
+        </tr>
+        <tr>
+            <td><code class="highlighter-rouge">Code 4</code></td>
+            <td>AVR</td>
+            <td>IDE Arduino</td>
+            <td>178</td>
+            <td>µC AVR avec les mêmes registres</td>
+        </tr>
+        <tr>
+            <td><code class="highlighter-rouge">Code 5</code></td>
+            <td>AVR</td>
+            <td>avr-gcc</td>
+            <td>178</td>
+            <td>µC AVR avec les mêmes registres</td>
+        </tr>
+        <tr>
+            <td><code class="highlighter-rouge">Code 6</code></td>
+            <td>-</td>
+            <td>avr-gcc</td>
+            <td>174</td>
+            <td>µC AVR avec les mêmes registres</td>
+        </tr>
+    </tbody>
+</table>
+
+<p>Dès qu’on utilise des éléments de la <strong>lib AVR</strong> on se retrouve limité aux <code class="highlighter-rouge">µC AVR</code>, et dès qu’on utilise des éléments spécifiques à un <code class="highlighter-rouge">µC</code> (comme les registres) on restreint encore plus la compatibilité du code.</p>
+
+<p>L’<strong>IDE Arduino</strong> utilise également <strong>avr-gcc</strong> pour les cartes basées sur un <code class="highlighter-rouge">µC AVR</code>, mais il va automatiquement inclure son <strong>framework</strong> ainsi qu’une grande partie de la <strong>lib AVR</strong>.</p>
+
+<p>C’est pour cela que les codes compilés dans l’<strong>IDE Arduino</strong> n’ont pas besoin d’include pour utiliser les fonctionnalités du <strong>framework</strong> et une grande partie des fonctionnalités de la <strong>lib AVR</strong>.</p>
+
+<p>Pour compiler avec <strong>avr-gcc</strong> j’ai utilisé exactement les mêmes options que l’<strong>IDE Arduino</strong> (sans forcément chercher à quoi elles servent), le but n’étant pas de voir si les options de compilation sont réellement optimales mais plutôt de comparer le résultat final avec les même options compilation.</p>
+
+<p>Voici les commandes pour compiler et récupérer le binaire :</p>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>avr-gcc <span class="nt">-Wall</span> <span class="nt">-Wextra</span> <span class="nt">-Os</span> <span class="nt">-g</span> <span class="nt">-flto</span> <span class="nt">-fuse-linker-plugin</span> <span class="nt">-Wl</span>,--gc-sections <span class="nt">-mmcu</span><span class="o">=</span>atmega328p blink.c <span class="nt">-o</span> blink.elf
+avr-objcopy <span class="nt">-O</span> binary blink.elf blink.bin
+</code></pre></div></div>
+
+<p>Et la commande pour programmer votre Arduino :</p>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>avrdude <span class="nt">-c</span> arduino <span class="nt">-p</span> m328p <span class="nt">-P</span> COMX <span class="nt">-b</span> 115200 <span class="nt">-U</span> flash:w:blink.bin
+</code></pre></div></div>
+
+<p>Evidemment il faut remplacer <code class="highlighter-rouge">COMX</code> (<code class="highlighter-rouge">/dev/ttySX</code> sous linux) par le bon port série.<br />
+Si votre Arduino possède un ancien bootloader, vous devrez passer en baudrate 57600 (<code class="highlighter-rouge">-b 57600</code>) au lieu de 115200.<br />
+Au besoin, adaptez également l’option <code class="highlighter-rouge">-p</code> pour correspondre à votre <code class="highlighter-rouge">µC</code> (pour obtenir la liste, tapez cette commande : <code class="highlighter-rouge">avrdude -c avrisp</code>).</p>
+
+<h2 id="conclusion">Conclusion</h2>
+
+<p>La différence de poids peut sembler énorme, et elle l’est pour un simple <code class="highlighter-rouge">Blink</code> !<br />
+Mais sur un programme bien plus gros, la différence de poids serait beaucoup moins impressionnante.</p>
+
+<p>Certes on gagnera toujours de l’espace en limitant l’utilisation des <strong>fonctions Arduino</strong>, mais toujours au détriment de la compatibilité entre les différents <code class="highlighter-rouge">µC</code>.</p>
+
+<p>Et comme évoqué précédemment, il y a aussi les performances qui rentrent en jeu !<br />
+L’utilisation des registres permet vraiment un gros gain, autant en poids qu’en performance.</p>
+
+<p>Suivant les contraintes de votre projet vous n’aurez peut-être pas le choix, si vous avez besoin d’optimiser au maximum les performances, et éventuellement la mémoire nécessaire, alors il faudra abandonner le <strong>framework Arduino</strong> et donc abandonner la compatibilité Arduino.</p>
+
+<p>Quoi qu’il en soit, pour débuter avec les <code class="highlighter-rouge">µC</code>, le <strong>framework Arduino</strong> est vraiment très bien conçu !<br />
+Pour partager son projet avec un maximum de personnes et surtout permettre de réutiliser votre code facilement, il est également très intéressant d’utiliser ce framework.</p>
+
+<p>C’est donc des choix à faire … ça va dépendre de votre projet, de votre cible et de vos préférences.</p>
+
+<p>Evidemment, il existe aussi des <code class="highlighter-rouge">µC</code> qui ne sont pas compatibles Arduino, il y a un choix énorme dans ce domaine.<br />
+Si c’est pour une utilisation pro, je pense que vous ne devriez même pas vous demander si il faut utiliser ou non le <strong>framework Arduino</strong> …<br />
+Pour moi l’utilisation d’<strong>Arduino</strong> est essentiellement pour l’apprentissage, le partage et le bidouillage !</p>
+
+<p>Donc pour terminer, j’estime qu’il est inacceptable de cracher sur le <strong>framework Arduino</strong> (malgré ses points négatifs), et je pense que ceux qui le font n’ont pas la bonne approche.<br />
+Grâce à Arduino, l’électronique et la programmation embarquée se démocratisent de plus en plus et sont désormais très abordables pour tout le monde !</p>
+
+<h2 id="sources-et-inspirations">Sources et inspirations</h2>
+
+<ul>
+  <li><a href="https://www.arduino.cc/" target="_blank">Arduino</a></li>
+  <li><a href="https://www.microchip.com/en-us/development-tools-tools-and-software/gcc-compilers-avr-and-arm" target="_blank">AVR Toolchain</a></li>
+</ul>
+
+  </div>
+  <div id="markdown-outline" class="col-lg-3">
+  </div>
+  
+    <div id="disqus_thread" class="pt-2 pb-4">
+</div>
+
+<script>
+	var disqus_loaded = false;
+	function load_disqus(){
+		var disqus_target = document.getElementById('disqus_thread'),
+		disqus_embed = document.createElement('script');
+
+		if(disqus_target && !disqus_loaded){
+			disqus_loaded = true;
+			disqus_embed.type = 'text/javascript';
+			disqus_embed.async = true;
+			disqus_embed.src = '//elrindel.disqus.com/embed.js';
+			document.getElementsByTagName('head')[0].appendChild(disqus_embed);
+		}
+	}
+	function load_disqus_scroll(){
+		var currentScroll = document.scrollingElement.scrollTop;
+		var disqus_target = document.getElementById('disqus_thread');
+
+		if(window.scrollY >= disqus_target.offsetTop-window.innerHeight-150){
+			load_disqus();
+			window.removeEventListener('scroll', load_disqus_scroll);
+		}
+	}
+	window.addEventListener('scroll', load_disqus_scroll, false);
+</script>
+  
+</div>
+      </div>
+    </section>
+    
+<footer id="l-footer">
+    <div class="container">
+        <div class="row">
+        </div>
+    </div>
+</footer>
+<script type="text/javascript" src="/assets/js/simpleLightbox.min.js"></script>
+<script type="text/javascript" src="/assets/js/base.js?v=1.0.4"></script>
+
+<script type="text/javascript" src="/assets/js/post.js?v=1.0.4"></script>
+
+
+  </body>
+
+</html>

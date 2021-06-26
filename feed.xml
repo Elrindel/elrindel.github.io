@@ -5,12 +5,394 @@
     <description>Mes projets</description>
     <link>https://elrindel.github.io/</link>
     <atom:link href="https://elrindel.github.io/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Tue, 04 Aug 2020 11:03:57 +0200</pubDate>
-    <lastBuildDate>Tue, 04 Aug 2020 11:03:57 +0200</lastBuildDate>
+    <pubDate>Sat, 26 Jun 2021 10:51:17 +0200</pubDate>
+    <lastBuildDate>Sat, 26 Jun 2021 10:51:17 +0200</lastBuildDate>
     <generator>Jekyll v4.0.0</generator>
     
       <item>
-        <title>Fabrication d'une cartouche GameBoy programmable pas chère</title>
+        <title>Utiliser un Arduino sans code Arduino : ATmega328P</title>
+        <description>&lt;p&gt;Vous avez probablement déjà entendu parler d’&lt;strong&gt;Arduino&lt;/strong&gt;, au moins en tant que &lt;strong&gt;carte électronique programmable&lt;/strong&gt; pour bidouilleur (d’ailleurs j’en ai utilisé dans mes précédents articles).&lt;br /&gt;
+Si vous connaissez déjà ces cartes c’est bien, si vous avez déjà testé un petit &lt;strong&gt;programme Arduino&lt;/strong&gt; c’est mieux !!&lt;/p&gt;
+
+&lt;p&gt;En effet, cet article n’a pas pour objectif de vous présenter ni de vous initier à l’&lt;strong&gt;Arduino&lt;/strong&gt;, mais plutôt d’explorer différentes façons d’écrire du code et voir quels sont les avantages et inconvénients de l’&lt;strong&gt;environnement Arduino&lt;/strong&gt;, et surtout comment &lt;strong&gt;créer des programmes Arduino sans code Arduino&lt;/strong&gt;.&lt;/p&gt;
+
+&lt;h2 id=&quot;introduction&quot;&gt;Introduction&lt;/h2&gt;
+
+&lt;p&gt;&lt;strong&gt;Arduino&lt;/strong&gt; ce n’est pas seulement des &lt;strong&gt;cartes électroniques programmables&lt;/strong&gt;, c’est aussi un &lt;strong&gt;IDE&lt;/strong&gt; et surtout un &lt;strong&gt;framework&lt;/strong&gt;, le tout &lt;strong&gt;open-source&lt;/strong&gt; !&lt;/p&gt;
+
+&lt;p&gt;Ce &lt;strong&gt;framework&lt;/strong&gt; est sujet à débat … certains lui reprochent de trop simplifier la programmation des &lt;code class=&quot;highlighter-rouge&quot;&gt;µC&lt;/code&gt; &lt;em&gt;(microcontrôleurs)&lt;/em&gt;, ce qui rend le programme plus lourd (en terme de mémoire et d’exécution), pas optimisé et “limite certaines possibilités”.&lt;br /&gt;
+Enfin, ce sont les principaux arguments qu’on retrouve contre ce &lt;strong&gt;framework&lt;/strong&gt;, mais nous allons voir que malgré ces points négatifs, il y a aussi du positif et ce n’est pas négligeable !&lt;/p&gt;
+
+&lt;p&gt;Concernant l’&lt;strong&gt;IDE Arduino&lt;/strong&gt;, tout le monde semble plus ou moins d’accord sur le fait que cet environnement de développement est totalement dépassé !&lt;br /&gt;
+C’est un véritable calvaire de coder dans cet &lt;strong&gt;IDE&lt;/strong&gt;, même si c’est toujours mieux que le vieux notepad natif de Windows … (ouai bon, j’exagère un peu, c’est pas bien compliqué de faire mieux que ce vieux notepad ^^).&lt;br /&gt;
+&lt;em&gt;A l’heure actuelle, ils travaillent sur une nouvelle version de l’IDE Arduino (version 2.0 dispo en beta). Même si elle semble bien mieux que la première version, il semblerait qu’elle ne soit pas encore prête à remplacer un véritable IDE.&lt;/em&gt;&lt;/p&gt;
+
+&lt;h3 id=&quot;cest-quoi-un-microcontrôleur-&quot;&gt;C’est quoi un microcontrôleur ?&lt;/h3&gt;
+
+&lt;p&gt;Si vous n’êtes pas déjà familier avec les cartes électroniques programmables, il est possible que vous ne saisissiez pas bien ce qu’est un &lt;code class=&quot;highlighter-rouge&quot;&gt;µC&lt;/code&gt; &lt;em&gt;(microcontrôleurs)&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;Sans rentrer dans les détails, un &lt;code class=&quot;highlighter-rouge&quot;&gt;µC&lt;/code&gt; est une puce électronique qui contient tous les éléments (ou presque) nécessaires à l’exécution d’un code et à la manipulation d’entrées/sorties et/ou l’utilisation de certains périphériques (DAC/ADC, liaison série, timer etc…).&lt;/p&gt;
+
+&lt;p&gt;Chaque modèle de carte électronique programmable est basé sur un modèle de &lt;code class=&quot;highlighter-rouge&quot;&gt;µC&lt;/code&gt; (dans certains cas, suivant la version d’une carte on peut trouver un µC légèrement différents).&lt;/p&gt;
+
+&lt;p&gt;Par exemple, le très célèbre &lt;strong&gt;Arduino UNO&lt;/strong&gt; utilise le non moins célèbre &lt;code class=&quot;highlighter-rouge&quot;&gt;µC&lt;/code&gt; &lt;strong&gt;ATmega328&lt;/strong&gt; (tout comme l’&lt;strong&gt;Arduino Nano&lt;/strong&gt;, mais ce dernier existe aussi avec un &lt;strong&gt;ATmega168&lt;/strong&gt;).&lt;/p&gt;
+
+&lt;p&gt;Ces cartes contiennent généralement assez peu de composants.&lt;br /&gt;
+Une grande partie des &lt;code class=&quot;highlighter-rouge&quot;&gt;µC&lt;/code&gt; ont uniquement besoin d’une alimentation pour fonctionner. D’autres vont également avoir besoin d’un oscillateur externe, voir même d’une mémoire externe (ou plusieurs), puis suivant les périphériques présents dans le &lt;code class=&quot;highlighter-rouge&quot;&gt;µC&lt;/code&gt; on peut avoir besoin d’autres composants comme une antenne par exemple …&lt;/p&gt;
+
+&lt;p&gt;Le rôle principal de ce genre de carte est donc de faciliter les connexions, ce sont des cartes de développement qui permettent de réaliser des tests facilement et rapidement, notamment en intégrant (généralement) une interface USB pour programmer facilement le &lt;code class=&quot;highlighter-rouge&quot;&gt;µC&lt;/code&gt; (la partie USB est gérée soit par une puce dédiée sur la carte, soit par le &lt;code class=&quot;highlighter-rouge&quot;&gt;µC&lt;/code&gt; directement si il est compatible avec cette fonctionnalité).&lt;br /&gt;
+Mais on pourrait très bien utiliser le &lt;code class=&quot;highlighter-rouge&quot;&gt;µC&lt;/code&gt; en dehors de sa carte en lui apportant le minimum de composants requis pour qu’il fonctionne (donc pas grand chose).&lt;/p&gt;
+
+&lt;h2 id=&quot;concept-de-lide-arduino&quot;&gt;Concept de l’IDE Arduino&lt;/h2&gt;
+
+&lt;p&gt;Malgré ses défauts, cet &lt;strong&gt;environnement de développement Arduino&lt;/strong&gt; a l’avantage de simplifier énormément la compilation et le transfert des programmes pour toutes les cartes compatibles &lt;strong&gt;Arduino&lt;/strong&gt; grâce à un gestionnaire de librairies très facile à utiliser ainsi qu’un gestionnaire de cartes qui permet d’ajouter de nouvelles cartes et/ou de nouvelles options pour certaines cartes.&lt;/p&gt;
+
+&lt;p&gt;En quelques cliques on peut donc compiler et téléverser &lt;em&gt;(hmm, alors, cette traduction est aussi sujet à débat, mais c’est la traduction officielle …)&lt;/em&gt; le programme sur une carte gérée par l’&lt;strong&gt;IDE&lt;/strong&gt;.&lt;/p&gt;
+
+&lt;p&gt;Heureusement, vous pouvez éditer votre code dans votre éditeur favori puis utiliser l’&lt;strong&gt;IDE Arduino&lt;/strong&gt; uniquement pour la compilation et la programmation de votre carte.&lt;/p&gt;
+
+&lt;p&gt;Il existe évidemment d’autres alternatives pour ne pas utiliser l’&lt;strong&gt;IDE Arduino&lt;/strong&gt;, comme &lt;strong&gt;PlatformIO&lt;/strong&gt;, mais je ne vais pas traiter ce sujet ici.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Dans cet article nous verrons comment nous passer du framework et de l’IDE Arduino en utilisant directement les outils AVR (voir dans les prochains chapitres) !&lt;/strong&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;concept-du-framework-arduino&quot;&gt;Concept du framework Arduino&lt;/h2&gt;
+
+&lt;p&gt;Le &lt;strong&gt;framework Arduino&lt;/strong&gt; a pour objectif de rendre facilement accessible la programmation d’un certain nombre de &lt;code class=&quot;highlighter-rouge&quot;&gt;µC&lt;/code&gt;, mais aussi de rendre compatible le code pour une grande partie des &lt;strong&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;µC&lt;/code&gt; compatibles Arduino&lt;/strong&gt;.&lt;/p&gt;
+
+&lt;p&gt;En effet, chaque modèle de &lt;code class=&quot;highlighter-rouge&quot;&gt;µC&lt;/code&gt; a ses propres caractéristiques/spécificités, notamment au niveau de la répartition des GPIO et des adresses mémoire à utiliser pour atteindre ces GPIO ainsi que les différents périphériques du &lt;code class=&quot;highlighter-rouge&quot;&gt;µC&lt;/code&gt;.&lt;br /&gt;
+En utilisant le framework, inutile d’aller lire la documentation du &lt;code class=&quot;highlighter-rouge&quot;&gt;µC&lt;/code&gt; pour savoir quelle adresse mémoire (ou registre) utiliser etc…, c’est le framework qui gère tout ça pour nous !&lt;/p&gt;
+
+&lt;p&gt;Cela permet donc d’avoir un code identique pour une grande partie des &lt;code class=&quot;highlighter-rouge&quot;&gt;µC&lt;/code&gt; compatibles Arduino.&lt;br /&gt;
+Ce qui est un sacré avantage pour l’apprentissage et pour le partage !&lt;/p&gt;
+
+&lt;p&gt;Evidemment, si vous partagez un code qui utilise 50 GPIO d’un &lt;strong&gt;Arduino Mega&lt;/strong&gt; … vous ne pourrez pas l’utiliser directement sur un &lt;strong&gt;Arduino UNO&lt;/strong&gt; (qui possède seulement 20 GPIO).&lt;br /&gt;
+Le framework n’est pas magique, il ne va pas créer ce qui n’existe pas … (pour certaines fonctionnalités ou certains périphériques il peut proposer une solution software quand c’est possible).&lt;/p&gt;
+
+&lt;h2 id=&quot;comparaison-dun-code-arduino-avec-et-sans-framework&quot;&gt;Comparaison d’un code Arduino avec et sans framework&lt;/h2&gt;
+
+&lt;p&gt;J’ai hésité à faire des benchmark pour comparer les performances d’un “même” code avec et sans framework mais ça impliquerait de rentrer beaucoup plus dans les détails de tout un tas de fonctionnalités et ça ferait un article interminable … (peut-être pour un prochain article)&lt;br /&gt;
+Donc pour simplifier la comparaison, je me suis limité à comparer la taille des binaires (la quantité de mémoire flash utilisée pour stocker le programme dans le &lt;code class=&quot;highlighter-rouge&quot;&gt;µC&lt;/code&gt;).&lt;/p&gt;
+
+&lt;p&gt;Quand on parle de programme de test sur un &lt;strong&gt;Arduino&lt;/strong&gt;, le plus populaire est sans conteste le &lt;code class=&quot;highlighter-rouge&quot;&gt;Blink&lt;/code&gt; qui permet tout simplement de faire clignoter une LED à intervalle régulier.&lt;br /&gt;
+Généralement, les cartes &lt;strong&gt;Arduino&lt;/strong&gt; ont une LED intégrée sur la carte, ce qui permet de tester directement sans aucun branchement autre que l’alimentation.&lt;/p&gt;
+
+&lt;p&gt;On va voir ci-dessous différentes façons de réaliser ce &lt;code class=&quot;highlighter-rouge&quot;&gt;Blink&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;J’utilise un Arduino UNO pour ce programme de test ! C’est donc un &lt;code class=&quot;highlighter-rouge&quot;&gt;µC&lt;/code&gt; ATmega328 (processeur AVR, donc utilisation de la lib et des outils AVR).&lt;/strong&gt;&lt;/p&gt;
+
+&lt;h3 id=&quot;1---code-arduino-compilateur-ide-arduino&quot;&gt;1 - Code Arduino, Compilateur IDE Arduino&lt;/h3&gt;
+
+&lt;p&gt;Le code &lt;code class=&quot;highlighter-rouge&quot;&gt;Blink&lt;/code&gt; officiel :&lt;/p&gt;
+
+&lt;div class=&quot;language-cpp highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;setup&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;pinMode&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;LED_BUILTIN&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;OUTPUT&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;loop&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;digitalWrite&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;LED_BUILTIN&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;HIGH&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;delay&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1000&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;digitalWrite&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;LED_BUILTIN&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;LOW&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;delay&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1000&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;strong&gt;Mémoire utilisée :&lt;/strong&gt; &lt;code class=&quot;highlighter-rouge&quot;&gt;924 octets&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Compatibilité :&lt;/strong&gt; &lt;code class=&quot;highlighter-rouge&quot;&gt;Toutes les cartes compatibles Arduino&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;Certaines cartes n’ont pas de LED intégrée, auquel cas il faut l’ajouter pour le test.&lt;/p&gt;
+
+&lt;h3 id=&quot;2---code-arduino-optimisé-1-compilateur-ide-arduino&quot;&gt;2 - Code Arduino optimisé 1, Compilateur IDE Arduino&lt;/h3&gt;
+
+&lt;p&gt;Première optimisation en remplaçant &lt;code class=&quot;highlighter-rouge&quot;&gt;delay&lt;/code&gt; du &lt;strong&gt;framework Arduino&lt;/strong&gt; par &lt;code class=&quot;highlighter-rouge&quot;&gt;_delay_ms&lt;/code&gt; de la &lt;strong&gt;lib AVR&lt;/strong&gt; :&lt;/p&gt;
+
+&lt;div class=&quot;language-cpp highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;setup&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;pinMode&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;LED_BUILTIN&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;OUTPUT&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;loop&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;digitalWrite&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;LED_BUILTIN&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;HIGH&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;_delay_ms&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1000&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;digitalWrite&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;LED_BUILTIN&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;LOW&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;_delay_ms&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1000&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;strong&gt;Mémoire utilisée :&lt;/strong&gt; &lt;code class=&quot;highlighter-rouge&quot;&gt;770 octets&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Compatibilité :&lt;/strong&gt; &lt;code class=&quot;highlighter-rouge&quot;&gt;Cartes Arduino basées sur un µC AVR&lt;/code&gt;&lt;br /&gt;
+&lt;em&gt;Et éventuellement d’autres si la fonction &lt;code class=&quot;highlighter-rouge&quot;&gt;_delay_ms&lt;/code&gt; existe dans la lib du µC en question.&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;154 octets&lt;/code&gt; de gagnés juste en utilisant une autre fonction de délais, mais au détriment d’une compatibilité limitée aux µC AVR.&lt;/p&gt;
+
+&lt;h3 id=&quot;3---code-arduino-optimisé-2-compilateur-ide-arduino&quot;&gt;3 - Code Arduino optimisé 2, Compilateur IDE Arduino&lt;/h3&gt;
+
+&lt;p&gt;Seconde optimisation en utilisant directement les registres pour configurer et manipuler le GPIO &lt;code class=&quot;highlighter-rouge&quot;&gt;LED_BUILTIN&lt;/code&gt; (qui correspond à la GPIO 13) :&lt;/p&gt;
+
+&lt;div class=&quot;language-cpp highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;setup&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(){&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;DDRB&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mb&quot;&gt;0b00100000&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;loop&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(){&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;PORTB&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|=&lt;/span&gt; &lt;span class=&quot;mb&quot;&gt;0b00100000&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;_delay_ms&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1000&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;PORTB&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;=&lt;/span&gt; &lt;span class=&quot;mb&quot;&gt;0b11011111&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;_delay_ms&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1000&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;strong&gt;Mémoire utilisée :&lt;/strong&gt; &lt;code class=&quot;highlighter-rouge&quot;&gt;488 octets&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Compatibilité :&lt;/strong&gt; &lt;code class=&quot;highlighter-rouge&quot;&gt;Cartes Arduino basées sur un µC AVR et dont le bit 5 du registre B correspond bien au bon GPIO&lt;/code&gt;&lt;br /&gt;
+&lt;em&gt;Parmi les cartes Arduino officielles les plus connues, les suivantes son compatibles : Duemilanove, Mini, Nano, Pro Mini, Uno&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;Pour déterminer le registre et le bit à utiliser, soit il faut lire le datasheet du &lt;code class=&quot;highlighter-rouge&quot;&gt;µC&lt;/code&gt;, soit il faut regarder le &lt;code class=&quot;highlighter-rouge&quot;&gt;pinout de la carte&lt;/code&gt; et/ou celui du &lt;code class=&quot;highlighter-rouge&quot;&gt;µC&lt;/code&gt; (&lt;strong&gt;pinout arduino uno&lt;/strong&gt; dans une recherche d’images).&lt;br /&gt;
+Dans le cas présent, on constate que le GPIO 13 est sur le port &lt;code class=&quot;highlighter-rouge&quot;&gt;PB5&lt;/code&gt;, ce qui correspond au port/registre &lt;code class=&quot;highlighter-rouge&quot;&gt;B&lt;/code&gt; et au bit &lt;code class=&quot;highlighter-rouge&quot;&gt;5&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;L’utilisation des registres permet, dans le cas présent, d’économiser &lt;code class=&quot;highlighter-rouge&quot;&gt;282 octets&lt;/code&gt; !&lt;br /&gt;
+Cependant, les registres dépendent des µC … comme évoqué précédemment, d’un modèle de µC à un autre, les GPIO et autres périphériques sont généralement attribués à des adresses/registres/ports différents.&lt;/p&gt;
+
+&lt;p&gt;Mais il y a au moins deux gros avantages à utiliser les registres :&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;Au niveau des performances c’est le top, on ne pourra pas faire mieux (et comparé aux fonctions du framework c’est un gain énorme en performance)&lt;/li&gt;
+  &lt;li&gt;On peut manipuler plusieurs GPIO d’un coup ! Dans le cas présent on peut manipuler 8 GPIO d’un coup (sur un ESP32 on peut manipuler 32 GPIO d’un coup)&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h3 id=&quot;4---code-avec-lib-avr-uniquement-compilateur-ide-arduino&quot;&gt;4 - Code avec lib AVR uniquement, Compilateur IDE Arduino&lt;/h3&gt;
+
+&lt;div class=&quot;language-cpp highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;__attribute__&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;((&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;weak&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt;
+&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(){&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;DDRB&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mb&quot;&gt;0b00100000&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+    &lt;span class=&quot;k&quot;&gt;for&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(;;){&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;PORTB&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|=&lt;/span&gt; &lt;span class=&quot;mb&quot;&gt;0b00100000&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;_delay_ms&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1000&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;PORTB&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;=&lt;/span&gt; &lt;span class=&quot;mb&quot;&gt;0b11011111&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;_delay_ms&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1000&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;strong&gt;Mémoire utilisée :&lt;/strong&gt; &lt;code class=&quot;highlighter-rouge&quot;&gt;178 octets&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Compatibilité :&lt;/strong&gt; &lt;code class=&quot;highlighter-rouge&quot;&gt;Même compatibilité que le code précédent&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;Les fonctions &lt;code class=&quot;highlighter-rouge&quot;&gt;setup&lt;/code&gt; et &lt;code class=&quot;highlighter-rouge&quot;&gt;loop&lt;/code&gt; font partie du &lt;strong&gt;framework Arduino&lt;/strong&gt;, mais derrière ces deux fonction il y a un &lt;code class=&quot;highlighter-rouge&quot;&gt;main&lt;/code&gt; !&lt;/p&gt;
+
+&lt;p&gt;En réécrivant la fonction &lt;code class=&quot;highlighter-rouge&quot;&gt;main&lt;/code&gt; on gagne &lt;code class=&quot;highlighter-rouge&quot;&gt;310 octets&lt;/code&gt; !&lt;/p&gt;
+
+&lt;p&gt;Cet écart est principalement lié à l’appel de la fonction &lt;code class=&quot;highlighter-rouge&quot;&gt;init&lt;/code&gt; qui est exécuté au début du &lt;code class=&quot;highlighter-rouge&quot;&gt;main&lt;/code&gt; du framework.&lt;br /&gt;
+Cette fonction &lt;code class=&quot;highlighter-rouge&quot;&gt;init&lt;/code&gt; permet d’activer les interruptions et de paramétrer les registres des timers et de l’ADC.&lt;br /&gt;
+Pour notre &lt;code class=&quot;highlighter-rouge&quot;&gt;Blink&lt;/code&gt; on peut s’en passer, mais si le programme a besoin d’utiliser certaines de ces fonctionnalités alors il faudra s’assurer qu’ils sont bien paramétrés.&lt;/p&gt;
+
+&lt;h3 id=&quot;5---code-avec-lib-avr-uniquement-compilateur-avr-gcc&quot;&gt;5 - Code avec lib AVR uniquement, Compilateur avr-gcc&lt;/h3&gt;
+
+&lt;div class=&quot;language-cpp highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;cp&quot;&gt;#define F_CPU 16000000UL
+&lt;/span&gt;
+&lt;span class=&quot;cp&quot;&gt;#include &amp;lt;avr/io.h&amp;gt;
+#include &amp;lt;util/delay.h&amp;gt;
+&lt;/span&gt;
+&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(){&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;DDRB&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mb&quot;&gt;0b00100000&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+    &lt;span class=&quot;k&quot;&gt;for&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(;;){&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;PORTB&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|=&lt;/span&gt; &lt;span class=&quot;mb&quot;&gt;0b00100000&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;_delay_ms&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1000&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;PORTB&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;=&lt;/span&gt; &lt;span class=&quot;mb&quot;&gt;0b11011111&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;_delay_ms&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1000&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;strong&gt;Mémoire utilisée :&lt;/strong&gt; &lt;code class=&quot;highlighter-rouge&quot;&gt;178 octets&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Compatibilité :&lt;/strong&gt; &lt;code class=&quot;highlighter-rouge&quot;&gt;Même compatibilité que le code précédent MAIS il faut indiquer la fréquence de fonctionnement du µC !&lt;/code&gt;&lt;br /&gt;
+&lt;em&gt;Dans le cas présent, le fait de définir une mauvaise fréquence ne devrait pas bloquer le programme, mais la fonction &lt;code class=&quot;highlighter-rouge&quot;&gt;_delay_ms&lt;/code&gt; ne sera pas cohérente.&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;Exactement le même poids qu’avec le code précédent, et c’est parfaitement normal puisqu’il s’agit du même code mais avec les instructions nécessaires à la compilation en dehors de l’&lt;strong&gt;IDE Arduino&lt;/strong&gt;.&lt;/p&gt;
+
+&lt;h3 id=&quot;6---code-sans-framework-et-sans-lib-compilateur-avr-gcc&quot;&gt;6 - Code sans framework et sans lib, Compilateur avr-gcc&lt;/h3&gt;
+
+&lt;div class=&quot;language-cpp highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;typedef&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;unsigned&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;char&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;uint8_t&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;typedef&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;unsigned&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;uint16_t&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;typedef&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;unsigned&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;long&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;uint32_t&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+&lt;span class=&quot;cp&quot;&gt;#define F_CPU 16000000UL
+&lt;/span&gt;
+&lt;span class=&quot;cp&quot;&gt;#define DDRB (*(volatile uint8_t *)(0x24))
+#define PORTB (*(volatile uint8_t *)(0x25))
+&lt;/span&gt;
+&lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;_delay_loop_2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;uint16_t&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;__count&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;){&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;__asm__&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;volatile&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+        &lt;span class=&quot;s&quot;&gt;&quot;1: sbiw %0,1&quot;&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\n\t&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;&lt;/span&gt;
+        &lt;span class=&quot;s&quot;&gt;&quot;brne 1b&quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;=w&quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;__count&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;0&quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;__count&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;_delay_ms&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;double&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;__ms&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;){&lt;/span&gt;
+    &lt;span class=&quot;kt&quot;&gt;double&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;__tmp&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;kt&quot;&gt;uint16_t&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;__ticks&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;__tmp&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;((&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;F_CPU&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;/&lt;/span&gt; &lt;span class=&quot;mf&quot;&gt;4e3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;__ms&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;__tmp&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;mf&quot;&gt;1.0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;__ticks&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;else&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;__tmp&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;65535&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;__ticks&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;uint16_t&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;__ms&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;mf&quot;&gt;10.0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;while&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;__ticks&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+            &lt;span class=&quot;n&quot;&gt;_delay_loop_2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(((&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;F_CPU&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;/&lt;/span&gt; &lt;span class=&quot;mf&quot;&gt;4e3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;/&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+            &lt;span class=&quot;n&quot;&gt;__ticks&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;--&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;else&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;__ticks&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;uint16_t&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;__tmp&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;_delay_loop_2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;__ticks&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(){&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;DDRB&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mb&quot;&gt;0b00100000&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+    &lt;span class=&quot;k&quot;&gt;for&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(;;){&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;PORTB&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|=&lt;/span&gt; &lt;span class=&quot;mb&quot;&gt;0b00100000&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;_delay_ms&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1000&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;PORTB&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;=&lt;/span&gt; &lt;span class=&quot;mb&quot;&gt;0b11011111&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;_delay_ms&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1000&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;strong&gt;Mémoire utilisée :&lt;/strong&gt; &lt;code class=&quot;highlighter-rouge&quot;&gt;174 octets&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Compatibilité :&lt;/strong&gt; &lt;code class=&quot;highlighter-rouge&quot;&gt;Même compatibilité que le code précédent&lt;/code&gt;&lt;br /&gt;
+&lt;em&gt;J’ai simplement copié une partie de la fonction de la lib AVR pour gérer le délais. Il y a aucun intérêt à faire ça mais c’était pour montrer cette possibilité.&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;Vous en conviendrez, le gain de &lt;code class=&quot;highlighter-rouge&quot;&gt;4 octets&lt;/code&gt; ne justifie clairement pas de faire ce genre de code.&lt;/p&gt;
+
+&lt;h3 id=&quot;récapitulatif&quot;&gt;Récapitulatif&lt;/h3&gt;
+
+&lt;table class=&quot;small&quot;&gt;
+    &lt;thead&gt;
+        &lt;tr&gt;
+            &lt;th&gt;&lt;/th&gt;
+            &lt;th&gt;Lib&lt;/th&gt;
+            &lt;th&gt;Compilateur&lt;/th&gt;
+            &lt;th&gt;Mémoire (octets)&lt;/th&gt;
+            &lt;th&gt;Compatibilité&lt;/th&gt;
+        &lt;/tr&gt;
+    &lt;/thead&gt;
+    &lt;tbody&gt;
+        &lt;tr&gt;
+            &lt;td&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;Code 1&lt;/code&gt;&lt;/td&gt;
+            &lt;td&gt;Arduino&lt;/td&gt;
+            &lt;td&gt;IDE Arduino&lt;/td&gt;
+            &lt;td&gt;924&lt;/td&gt;
+            &lt;td&gt;Arduino&lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+            &lt;td&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;Code 2&lt;/code&gt;&lt;/td&gt;
+            &lt;td&gt;Arduino + AVR&lt;/td&gt;
+            &lt;td&gt;IDE Arduino&lt;/td&gt;
+            &lt;td&gt;770&lt;/td&gt;
+            &lt;td&gt;µC AVR&lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+            &lt;td&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;Code 3&lt;/code&gt;&lt;/td&gt;
+            &lt;td&gt;Arduino + AVR&lt;/td&gt;
+            &lt;td&gt;IDE Arduino&lt;/td&gt;
+            &lt;td&gt;488&lt;/td&gt;
+            &lt;td&gt;µC AVR avec les mêmes registres&lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+            &lt;td&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;Code 4&lt;/code&gt;&lt;/td&gt;
+            &lt;td&gt;AVR&lt;/td&gt;
+            &lt;td&gt;IDE Arduino&lt;/td&gt;
+            &lt;td&gt;178&lt;/td&gt;
+            &lt;td&gt;µC AVR avec les mêmes registres&lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+            &lt;td&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;Code 5&lt;/code&gt;&lt;/td&gt;
+            &lt;td&gt;AVR&lt;/td&gt;
+            &lt;td&gt;avr-gcc&lt;/td&gt;
+            &lt;td&gt;178&lt;/td&gt;
+            &lt;td&gt;µC AVR avec les mêmes registres&lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+            &lt;td&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;Code 6&lt;/code&gt;&lt;/td&gt;
+            &lt;td&gt;-&lt;/td&gt;
+            &lt;td&gt;avr-gcc&lt;/td&gt;
+            &lt;td&gt;174&lt;/td&gt;
+            &lt;td&gt;µC AVR avec les mêmes registres&lt;/td&gt;
+        &lt;/tr&gt;
+    &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;Dès qu’on utilise des éléments de la &lt;strong&gt;lib AVR&lt;/strong&gt; on se retrouve limité aux &lt;code class=&quot;highlighter-rouge&quot;&gt;µC AVR&lt;/code&gt;, et dès qu’on utilise des éléments spécifiques à un &lt;code class=&quot;highlighter-rouge&quot;&gt;µC&lt;/code&gt; (comme les registres) on restreint encore plus la compatibilité du code.&lt;/p&gt;
+
+&lt;p&gt;L’&lt;strong&gt;IDE Arduino&lt;/strong&gt; utilise également &lt;strong&gt;avr-gcc&lt;/strong&gt; pour les cartes basées sur un &lt;code class=&quot;highlighter-rouge&quot;&gt;µC AVR&lt;/code&gt;, mais il va automatiquement inclure son &lt;strong&gt;framework&lt;/strong&gt; ainsi qu’une grande partie de la &lt;strong&gt;lib AVR&lt;/strong&gt;.&lt;/p&gt;
+
+&lt;p&gt;C’est pour cela que les codes compilés dans l’&lt;strong&gt;IDE Arduino&lt;/strong&gt; n’ont pas besoin d’include pour utiliser les fonctionnalités du &lt;strong&gt;framework&lt;/strong&gt; et une grande partie des fonctionnalités de la &lt;strong&gt;lib AVR&lt;/strong&gt;.&lt;/p&gt;
+
+&lt;p&gt;Pour compiler avec &lt;strong&gt;avr-gcc&lt;/strong&gt; j’ai utilisé exactement les mêmes options que l’&lt;strong&gt;IDE Arduino&lt;/strong&gt; (sans forcément chercher à quoi elles servent), le but n’étant pas de voir si les options de compilation sont réellement optimales mais plutôt de comparer le résultat final avec les même options compilation.&lt;/p&gt;
+
+&lt;p&gt;Voici les commandes pour compiler et récupérer le binaire :&lt;/p&gt;
+
+&lt;div class=&quot;language-sh highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;avr-gcc &lt;span class=&quot;nt&quot;&gt;-Wall&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-Wextra&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-Os&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-g&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-flto&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-fuse-linker-plugin&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-Wl&lt;/span&gt;,--gc-sections &lt;span class=&quot;nt&quot;&gt;-mmcu&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;atmega328p blink.c &lt;span class=&quot;nt&quot;&gt;-o&lt;/span&gt; blink.elf
+avr-objcopy &lt;span class=&quot;nt&quot;&gt;-O&lt;/span&gt; binary blink.elf blink.bin
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Et la commande pour programmer votre Arduino :&lt;/p&gt;
+
+&lt;div class=&quot;language-sh highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;avrdude &lt;span class=&quot;nt&quot;&gt;-c&lt;/span&gt; arduino &lt;span class=&quot;nt&quot;&gt;-p&lt;/span&gt; m328p &lt;span class=&quot;nt&quot;&gt;-P&lt;/span&gt; COMX &lt;span class=&quot;nt&quot;&gt;-b&lt;/span&gt; 115200 &lt;span class=&quot;nt&quot;&gt;-U&lt;/span&gt; flash:w:blink.bin
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Evidemment il faut remplacer &lt;code class=&quot;highlighter-rouge&quot;&gt;COMX&lt;/code&gt; (&lt;code class=&quot;highlighter-rouge&quot;&gt;/dev/ttySX&lt;/code&gt; sous linux) par le bon port série.&lt;br /&gt;
+Si votre Arduino possède un ancien bootloader, vous devrez passer en baudrate 57600 (&lt;code class=&quot;highlighter-rouge&quot;&gt;-b 57600&lt;/code&gt;) au lieu de 115200.&lt;br /&gt;
+Au besoin, adaptez également l’option &lt;code class=&quot;highlighter-rouge&quot;&gt;-p&lt;/code&gt; pour correspondre à votre &lt;code class=&quot;highlighter-rouge&quot;&gt;µC&lt;/code&gt; (pour obtenir la liste, tapez cette commande : &lt;code class=&quot;highlighter-rouge&quot;&gt;avrdude -c avrisp&lt;/code&gt;).&lt;/p&gt;
+
+&lt;h2 id=&quot;conclusion&quot;&gt;Conclusion&lt;/h2&gt;
+
+&lt;p&gt;La différence de poids peut sembler énorme, et elle l’est pour un simple &lt;code class=&quot;highlighter-rouge&quot;&gt;Blink&lt;/code&gt; !&lt;br /&gt;
+Mais sur un programme bien plus gros, la différence de poids serait beaucoup moins impressionnante.&lt;/p&gt;
+
+&lt;p&gt;Certes on gagnera toujours de l’espace en limitant l’utilisation des &lt;strong&gt;fonctions Arduino&lt;/strong&gt;, mais toujours au détriment de la compatibilité entre les différents &lt;code class=&quot;highlighter-rouge&quot;&gt;µC&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;Et comme évoqué précédemment, il y a aussi les performances qui rentrent en jeu !&lt;br /&gt;
+L’utilisation des registres permet vraiment un gros gain, autant en poids qu’en performance.&lt;/p&gt;
+
+&lt;p&gt;Suivant les contraintes de votre projet vous n’aurez peut-être pas le choix, si vous avez besoin d’optimiser au maximum les performances, et éventuellement la mémoire nécessaire, alors il faudra abandonner le &lt;strong&gt;framework Arduino&lt;/strong&gt; et donc abandonner la compatibilité Arduino.&lt;/p&gt;
+
+&lt;p&gt;Quoi qu’il en soit, pour débuter avec les &lt;code class=&quot;highlighter-rouge&quot;&gt;µC&lt;/code&gt;, le &lt;strong&gt;framework Arduino&lt;/strong&gt; est vraiment très bien conçu !&lt;br /&gt;
+Pour partager son projet avec un maximum de personnes et surtout permettre de réutiliser votre code facilement, il est également très intéressant d’utiliser ce framework.&lt;/p&gt;
+
+&lt;p&gt;C’est donc des choix à faire … ça va dépendre de votre projet, de votre cible et de vos préférences.&lt;/p&gt;
+
+&lt;p&gt;Evidemment, il existe aussi des &lt;code class=&quot;highlighter-rouge&quot;&gt;µC&lt;/code&gt; qui ne sont pas compatibles Arduino, il y a un choix énorme dans ce domaine.&lt;br /&gt;
+Si c’est pour une utilisation pro, je pense que vous ne devriez même pas vous demander si il faut utiliser ou non le &lt;strong&gt;framework Arduino&lt;/strong&gt; …&lt;br /&gt;
+Pour moi l’utilisation d’&lt;strong&gt;Arduino&lt;/strong&gt; est essentiellement pour l’apprentissage, le partage et le bidouillage !&lt;/p&gt;
+
+&lt;p&gt;Donc pour terminer, j’estime qu’il est inacceptable de cracher sur le &lt;strong&gt;framework Arduino&lt;/strong&gt; (malgré ses points négatifs), et je pense que ceux qui le font n’ont pas la bonne approche.&lt;br /&gt;
+Grâce à Arduino, l’électronique et la programmation embarquée se démocratisent de plus en plus et sont désormais très abordables pour tout le monde !&lt;/p&gt;
+
+&lt;h2 id=&quot;sources-et-inspirations&quot;&gt;Sources et inspirations&lt;/h2&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;https://www.arduino.cc/&quot; target=&quot;_blank&quot;&gt;Arduino&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://www.microchip.com/en-us/development-tools-tools-and-software/gcc-compilers-avr-and-arm&quot; target=&quot;_blank&quot;&gt;AVR Toolchain&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+        <pubDate>Fri, 25 Jun 2021 22:27:52 +0200</pubDate>
+        <link>https://elrindel.github.io/utiliser-arduino-sans-code-arduino-atmega328p</link>
+        <guid isPermaLink="true">https://elrindel.github.io/utiliser-arduino-sans-code-arduino-atmega328p</guid>
+        
+        
+        <category>Arduino</category>
+        
+      </item>
+    
+      <item>
+        <title>Fabrication d'une cartouche GameBoy programmable pas cher</title>
         <description>&lt;p&gt;Tester ses programmes dans un émulateur c’est bien, mais tester sur une véritable GameBoy c’est carrément mieux.&lt;/p&gt;
 
 &lt;p&gt;Pour cela, l’unique solution consiste à avoir une &lt;strong&gt;cartouche GameBoy programmable&lt;/strong&gt;.&lt;br /&gt;
@@ -254,7 +636,7 @@ C’est évidemment valable aussi pour le &lt;code class=&quot;highlighter-rouge
 &lt;p&gt;Nul doute qu’il y aura une suite à cet article afin de présenter une évolution :)&lt;br /&gt;
 Cependant, l’évolution nécessitera un peu plus de composants, rien que pour permettre de programmer la mémoire directement depuis la cartouche …&lt;/p&gt;
 
-&lt;p&gt;En attendant amusez vous bien et renseignez vous sur les prix des cartouches avant de les sacrifier, par exemple les jeux Pokémon coutent vraiment chères, ça serait dommage de les bousiller.&lt;/p&gt;
+&lt;p&gt;En attendant amusez vous bien et renseignez vous sur les prix des cartouches avant de les sacrifier, par exemple les jeux Pokémon coutent vraiment cher, ça serait dommage de les bousiller.&lt;/p&gt;
 
 &lt;h2 id=&quot;sources-et-inspirations&quot;&gt;Sources et inspirations&lt;/h2&gt;
 
@@ -266,8 +648,8 @@ Cependant, l’évolution nécessitera un peu plus de composants, rien que pour 
 &lt;/ul&gt;
 </description>
         <pubDate>Mon, 03 Aug 2020 12:03:32 +0200</pubDate>
-        <link>https://elrindel.github.io/fabrication-cartouche-gameboy-programmable-pas-chere</link>
-        <guid isPermaLink="true">https://elrindel.github.io/fabrication-cartouche-gameboy-programmable-pas-chere</guid>
+        <link>https://elrindel.github.io/fabrication-cartouche-gameboy-programmable-pas-cher</link>
+        <guid isPermaLink="true">https://elrindel.github.io/fabrication-cartouche-gameboy-programmable-pas-cher</guid>
         
         
         <category>gameboy</category>
@@ -410,7 +792,7 @@ Dans une seconde version je prévois l’utilisation du &lt;code class=&quot;hig
   &lt;li&gt;Au moins une mémoire flash en boitier &lt;code class=&quot;highlighter-rouge&quot;&gt;DIP32&lt;/code&gt;, dans mon cas ça sera une &lt;code class=&quot;highlighter-rouge&quot;&gt;39SF040&lt;/code&gt; (pour le boitier &lt;code class=&quot;highlighter-rouge&quot;&gt;PLCC32&lt;/code&gt; j’ai des &lt;code class=&quot;highlighter-rouge&quot;&gt;AM29F040&lt;/code&gt;)&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;p&gt;Vous pouvez trouver l’ensemble de ces composants sur internet pour vraiment pas chère. Si vous n’êtes pas trop pressés vous trouverez votre bonheur sur des sites comme &lt;strong&gt;Aliexpress&lt;/strong&gt; ou &lt;strong&gt;Ebay&lt;/strong&gt;.&lt;/p&gt;
+&lt;p&gt;Vous pouvez trouver l’ensemble de ces composants sur internet pour vraiment pas cher. Si vous n’êtes pas trop pressés vous trouverez votre bonheur sur des sites comme &lt;strong&gt;Aliexpress&lt;/strong&gt; ou &lt;strong&gt;Ebay&lt;/strong&gt;.&lt;/p&gt;
 
 &lt;h3 id=&quot;explications-registre-à-décalage-74hc595&quot;&gt;Explications registre à décalage 74HC595&lt;/h3&gt;
 
@@ -437,7 +819,7 @@ Le premier est géré par l’horloge &lt;code class=&quot;highlighter-rouge&quo
 &lt;p&gt;Un autre point intéressant, la sortie &lt;code class=&quot;highlighter-rouge&quot;&gt;QH'&lt;/code&gt; n’est pas liée à &lt;code class=&quot;highlighter-rouge&quot;&gt;RCLK&lt;/code&gt; ni à &lt;code class=&quot;highlighter-rouge&quot;&gt;OE#&lt;/code&gt;, on peut donc raccorder autant de puces qu’on le souhaite en série sans avoir besoin de faire un cycle &lt;code class=&quot;highlighter-rouge&quot;&gt;RCLK&lt;/code&gt; entre chaque puce et sans dépendre de l’état de &lt;code class=&quot;highlighter-rouge&quot;&gt;OE#&lt;/code&gt; !&lt;/p&gt;
 
 &lt;p&gt;Donc en reliant la sortie &lt;code class=&quot;highlighter-rouge&quot;&gt;QH'&lt;/code&gt; d’une puce à l’entrée &lt;code class=&quot;highlighter-rouge&quot;&gt;SER&lt;/code&gt; d’une autre puce, on permet aux données de passer d’une puce à l’autre.&lt;br /&gt;
-Il reste juste à relier toutes les broches communes à toutes les puces ensembles : &lt;code class=&quot;highlighter-rouge&quot;&gt;VCC&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;GND&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;RCLK&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;SRCLK&lt;/code&gt;&lt;/p&gt;
+Il reste juste à relier toutes les broches communes à toutes les puces ensemble : &lt;code class=&quot;highlighter-rouge&quot;&gt;VCC&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;GND&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;RCLK&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;SRCLK&lt;/code&gt;&lt;/p&gt;
 
 &lt;p&gt;Les deux dernière broche, &lt;code class=&quot;highlighter-rouge&quot;&gt;OE#&lt;/code&gt; et &lt;code class=&quot;highlighter-rouge&quot;&gt;SRCLR&lt;/code&gt;, sont également communes à toutes les puces.&lt;br /&gt;
 &lt;code class=&quot;highlighter-rouge&quot;&gt;OE#&lt;/code&gt; permet d’activer les sorties, dans le cas présent elles seront toujours actives, pour cela il faut mettre cette broche à l’état bas.&lt;br /&gt;
@@ -446,7 +828,7 @@ Il reste juste à relier toutes les broches communes à toutes les puces ensembl
 &lt;h2 id=&quot;le-schéma-électronique&quot;&gt;Le schéma électronique&lt;/h2&gt;
 
 &lt;p&gt;On a tout vu dans les chapitres précédents.&lt;br /&gt;
-Le schéma consiste donc tout simplement à raccorder les &lt;strong&gt;registres à décalage&lt;/strong&gt; ensembles, relier leurs sorties sur les entrées &lt;code class=&quot;highlighter-rouge&quot;&gt;A0&lt;/code&gt; à &lt;code class=&quot;highlighter-rouge&quot;&gt;AMS&lt;/code&gt; de la mémoire, relier les alimentations puis apporter tout le reste sur des connecteurs pour y raccorder l’&lt;code class=&quot;highlighter-rouge&quot;&gt;Arduino&lt;/code&gt;.&lt;/p&gt;
+Le schéma consiste donc tout simplement à raccorder les &lt;strong&gt;registres à décalage&lt;/strong&gt; ensemble, relier leurs sorties sur les entrées &lt;code class=&quot;highlighter-rouge&quot;&gt;A0&lt;/code&gt; à &lt;code class=&quot;highlighter-rouge&quot;&gt;AMS&lt;/code&gt; de la mémoire, relier les alimentations puis apporter tout le reste sur des connecteurs pour y raccorder l’&lt;code class=&quot;highlighter-rouge&quot;&gt;Arduino&lt;/code&gt;.&lt;/p&gt;
 
 &lt;p&gt;Sur le schéma j’ai directement inséré l’&lt;code class=&quot;highlighter-rouge&quot;&gt;Arduino Uno&lt;/code&gt; comme pour réaliser un &lt;strong&gt;shield arduino&lt;/strong&gt; (ça permet aussi de voir les raccordements à faire ^^).&lt;br /&gt;
 Mais lors de la fabrication du circuit, je n’ai pas fait de &lt;strong&gt;shield arduino&lt;/strong&gt; car c’était trop délicat à faire avec un &lt;strong&gt;circuit simple face&lt;/strong&gt; (et pour tout vous dire, j’ai foiré ma tentative de shield …).&lt;br /&gt;
