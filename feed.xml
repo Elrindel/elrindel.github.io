@@ -5,8 +5,8 @@
     <description>Mes projets</description>
     <link>https://elrindel.github.io/</link>
     <atom:link href="https://elrindel.github.io/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Sat, 26 Jun 2021 10:51:17 +0200</pubDate>
-    <lastBuildDate>Sat, 26 Jun 2021 10:51:17 +0200</lastBuildDate>
+    <pubDate>Sat, 26 Jun 2021 11:18:06 +0200</pubDate>
+    <lastBuildDate>Sat, 26 Jun 2021 11:18:06 +0200</lastBuildDate>
     <generator>Jekyll v4.0.0</generator>
     
       <item>
@@ -33,7 +33,7 @@ C’est un véritable calvaire de coder dans cet &lt;strong&gt;IDE&lt;/strong&gt
 
 &lt;p&gt;Sans rentrer dans les détails, un &lt;code class=&quot;highlighter-rouge&quot;&gt;µC&lt;/code&gt; est une puce électronique qui contient tous les éléments (ou presque) nécessaires à l’exécution d’un code et à la manipulation d’entrées/sorties et/ou l’utilisation de certains périphériques (DAC/ADC, liaison série, timer etc…).&lt;/p&gt;
 
-&lt;p&gt;Chaque modèle de carte électronique programmable est basé sur un modèle de &lt;code class=&quot;highlighter-rouge&quot;&gt;µC&lt;/code&gt; (dans certains cas, suivant la version d’une carte on peut trouver un µC légèrement différents).&lt;/p&gt;
+&lt;p&gt;Chaque modèle de carte électronique programmable est basé sur un modèle de &lt;code class=&quot;highlighter-rouge&quot;&gt;µC&lt;/code&gt; (dans certains cas, suivant la version d’une carte on peut trouver un µC légèrement différent).&lt;/p&gt;
 
 &lt;p&gt;Par exemple, le très célèbre &lt;strong&gt;Arduino UNO&lt;/strong&gt; utilise le non moins célèbre &lt;code class=&quot;highlighter-rouge&quot;&gt;µC&lt;/code&gt; &lt;strong&gt;ATmega328&lt;/strong&gt; (tout comme l’&lt;strong&gt;Arduino Nano&lt;/strong&gt;, mais ce dernier existe aussi avec un &lt;strong&gt;ATmega168&lt;/strong&gt;).&lt;/p&gt;
 
@@ -125,7 +125,7 @@ Généralement, les cartes &lt;strong&gt;Arduino&lt;/strong&gt; ont une LED int�
 
 &lt;h3 id=&quot;3---code-arduino-optimisé-2-compilateur-ide-arduino&quot;&gt;3 - Code Arduino optimisé 2, Compilateur IDE Arduino&lt;/h3&gt;
 
-&lt;p&gt;Seconde optimisation en utilisant directement les registres pour configurer et manipuler le GPIO &lt;code class=&quot;highlighter-rouge&quot;&gt;LED_BUILTIN&lt;/code&gt; (qui correspond à la GPIO 13) :&lt;/p&gt;
+&lt;p&gt;Seconde optimisation en utilisant directement les registres pour configurer et manipuler le GPIO &lt;code class=&quot;highlighter-rouge&quot;&gt;LED_BUILTIN&lt;/code&gt; (qui correspond au GPIO 13) :&lt;/p&gt;
 
 &lt;div class=&quot;language-cpp highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;setup&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(){&lt;/span&gt;
     &lt;span class=&quot;n&quot;&gt;DDRB&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mb&quot;&gt;0b00100000&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
@@ -177,7 +177,7 @@ Cependant, les registres dépendent des µC … comme évoqué précédemment, d
 
 &lt;p&gt;&lt;strong&gt;Compatibilité :&lt;/strong&gt; &lt;code class=&quot;highlighter-rouge&quot;&gt;Même compatibilité que le code précédent&lt;/code&gt;&lt;/p&gt;
 
-&lt;p&gt;Les fonctions &lt;code class=&quot;highlighter-rouge&quot;&gt;setup&lt;/code&gt; et &lt;code class=&quot;highlighter-rouge&quot;&gt;loop&lt;/code&gt; font partie du &lt;strong&gt;framework Arduino&lt;/strong&gt;, mais derrière ces deux fonction il y a un &lt;code class=&quot;highlighter-rouge&quot;&gt;main&lt;/code&gt; !&lt;/p&gt;
+&lt;p&gt;Les fonctions &lt;code class=&quot;highlighter-rouge&quot;&gt;setup&lt;/code&gt; et &lt;code class=&quot;highlighter-rouge&quot;&gt;loop&lt;/code&gt; font partie du &lt;strong&gt;framework Arduino&lt;/strong&gt;, mais derrière ces deux fonctions il y a un &lt;code class=&quot;highlighter-rouge&quot;&gt;main&lt;/code&gt; !&lt;/p&gt;
 
 &lt;p&gt;En réécrivant la fonction &lt;code class=&quot;highlighter-rouge&quot;&gt;main&lt;/code&gt; on gagne &lt;code class=&quot;highlighter-rouge&quot;&gt;310 octets&lt;/code&gt; !&lt;/p&gt;
 
