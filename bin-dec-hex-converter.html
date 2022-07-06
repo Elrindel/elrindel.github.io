@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Mes projets">
+<link type="application/atom+xml" rel="alternate" href="https://elrindel.github.io/feed.xml" title="Elrindel/Flob Blog" />
+<title>Bin/Dec/Hex Converter | Elrindel/Flob Blog</title>
+<meta property="og:title" content="Bin/Dec/Hex Converter" />
+<meta property="og:locale" content="fr_FR" />
+<link rel="canonical" href="https://elrindel.github.io/bin-dec-hex-converter" />
+<meta property="og:url" content="https://elrindel.github.io/bin-dec-hex-converter" />
+<meta property="og:site_name" content="Elrindel/Flob Blog" />
+
+<meta property="og:type" content="website" />
+
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Bin/Dec/Hex Converter" />
+<link rel="shortcut icon" href="/favicon.ico" type="image/icon">
+<link rel="icon" href="/favicon.ico" type="image/icon">
+<link rel="stylesheet" type="text/css" href="/assets/css/style.css?v=1.0.4">
+
+
+<link rel="stylesheet" type="text/css" href="/assets/css/highlight-theme.css">
+<link rel="stylesheet" type="text/css" href="/assets/css/rouge-code.css">
+
+
+<link rel="stylesheet" type="text/css" href="/assets/css/binConverter.css">
+</head>
+
+<body>
+    <header id="header">
+    <div class="container">
+        
+        <h1 class="title">
+            <a href="/">Elrindel/Flob</a>
+        </h1>
+        
+        <nav>
+            <ul>
+                <li><a href="/">Accueil</a></li>
+                <li><a href="https://github.com/Elrindel/" target="_blank">Github</a></li>
+                <li><a href="/liens">Liens</a></li>
+                <li><a href="/bin-dec-hex-converter">Bin Converter</a></li>
+            </ul>
+        </nav>
+    </div>
+</header>
+    <section id="main">
+        <div class="container">
+    <article>
+        <header>
+            <h1>Bin/Dec/Hex Converter</h1>
+        </header>
+        <form onsubmit="return false" class="converter">
+    <div class="converter-row">
+        <div class="label"></div>
+        <p class="converter-options">
+            <span>
+                Bits :
+                <label for="bits-8"><input type="radio" name="bits" id="bits-8" value="8" />8</label>
+                <label for="bits-16"><input type="radio" name="bits" id="bits-16" value="16" />16</label>
+                <label for="bits-32"><input type="radio" name="bits" id="bits-32" value="32" checked="checked" />32</label>
+                <label for="bits-64"><input type="radio" name="bits" id="bits-64" value="64" />64</label>
+                <label for="bits-c"><input type="radio" name="bits" id="bits-c" value="c" />custom</label>
+                <input type="number" name="bits-custom" id="bits-custom" value="32" min="1" max="128" step="1" style="display:none" /> 
+            </span>
+            <span>
+                <input type="checkbox" name="signed" id="signed" value="1" /><label for="signed"> Signed</label>
+            </span>
+        </p>
+    </div>
+    <div class="converter-row bits-num">
+        <div class="label"></div>
+        <span class="input-scroll">
+            <span class="input">
+                <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+                <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+                <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+                <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+                <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+                <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+                <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+                <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+            </span>
+        </span>
+    </div>
+    <div class="converter-row">
+        <label for="base2">Bin :</label>
+        <span class="input-scroll">
+            <input type="text" name="base2" class="input" id="base2" data-bigintprefix="0b" data-base="2" data-filter="[^01]" maxlength="32" />
+        </span>
+    </div>
+    <div class="converter-row">
+        <label for="base10">Dec :</label>
+        <span class="input-scroll">
+            <input type="text" name="base10" class="input" id="base10" data-base="10" data-filter="[^0-9]" data-signed="0" maxlength="32" />
+        </span>
+    </div>
+    <div class="converter-row">
+        <label for="base16">Hex :</label>
+        <span class="input-scroll">
+            <input type="text" name="base16" class="input" id="base16" data-bigintprefix="0x" data-base="16" data-filter="[^0-9A-F]" maxlength="32" />
+        </span>
+    </div>
+</form>
+    </article>
+</div>
+    </section>
+    
+<footer id="footer"></footer>
+
+
+<script async type="text/javascript" src="/assets/js/binConverter.js"></script>
+</body>
+
+</html>

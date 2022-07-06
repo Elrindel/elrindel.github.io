@@ -5,9 +5,9 @@
     <description>Mes projets</description>
     <link>https://elrindel.github.io/</link>
     <atom:link href="https://elrindel.github.io/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Sat, 24 Jul 2021 22:12:37 +0200</pubDate>
-    <lastBuildDate>Sat, 24 Jul 2021 22:12:37 +0200</lastBuildDate>
-    <generator>Jekyll v4.2.0</generator>
+    <pubDate>Wed, 06 Jul 2022 18:23:49 +0200</pubDate>
+    <lastBuildDate>Wed, 06 Jul 2022 18:23:49 +0200</lastBuildDate>
+    <generator>Jekyll v4.2.2</generator>
     
       <item>
         <title>Utiliser un Arduino sans code Arduino : ATmega328P</title>
@@ -189,8 +189,8 @@ Pour notre &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;Bl
 
 &lt;div class=&quot;language-cpp highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;cp&quot;&gt;#define F_CPU 16000000UL
 &lt;/span&gt;
-&lt;span class=&quot;cp&quot;&gt;#include &amp;lt;avr/io.h&amp;gt;
-#include &amp;lt;util/delay.h&amp;gt;
+&lt;span class=&quot;cp&quot;&gt;#include&lt;/span&gt; &lt;span class=&quot;cpf&quot;&gt;&amp;lt;avr/io.h&amp;gt;&lt;/span&gt;&lt;span class=&quot;cp&quot;&gt;
+#include&lt;/span&gt; &lt;span class=&quot;cpf&quot;&gt;&amp;lt;util/delay.h&amp;gt;&lt;/span&gt;&lt;span class=&quot;cp&quot;&gt;
 &lt;/span&gt;
 &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(){&lt;/span&gt;
     &lt;span class=&quot;n&quot;&gt;DDRB&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mb&quot;&gt;0b00100000&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
